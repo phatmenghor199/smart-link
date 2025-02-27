@@ -41,7 +41,7 @@ public class AuthController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JWTGenerator jwtGenerator;
-
+    private final UserMapper userMapper;
 
     @PostMapping("login")
     public ApiResponse<AuthResponseDto> login(@RequestBody LoginDto loginDto) {
@@ -57,7 +57,7 @@ public class AuthController {
             throw new NotFoundException("User not found");
         }
         UserEntity userEntity = userEntityOpt.get();
-        UserDto userDto = UserMapper.mapToDto(userEntity);
+        UserDto userDto = userMapper.toDto(userEntity);
 
         return new ApiResponse<>("success",
                 "Login successfully",
@@ -84,7 +84,7 @@ public class AuthController {
         UserEntity savedUser = userRepository.save(user);
 
         // Return success response
-        return new ApiResponse<>("success", "You have registered successfully.", UserMapper.mapToDto(savedUser));
+        return new ApiResponse<>("success", "You have registered successfully.", userMapper.toDto(savedUser));
     }
 
 }

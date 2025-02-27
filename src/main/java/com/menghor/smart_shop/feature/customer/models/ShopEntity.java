@@ -20,7 +20,7 @@ public class ShopEntity extends BaseEntity {
     private String name;
     private String location;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true)
     private UserEntity user;
 

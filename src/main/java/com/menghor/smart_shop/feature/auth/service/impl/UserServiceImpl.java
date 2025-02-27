@@ -31,6 +31,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Override
     public UserResponseDto getAllUser(int pageNo, int pageSize, String search) {
@@ -43,21 +44,21 @@ public class UserServiceImpl implements UserService {
         } else {
             userPage = userRepository.findAll(pageable);
         }
-        List<UserDto> content = userPage.getContent().stream().map(UserMapper::mapToDto).collect(Collectors.toList());
-        return UserMapper.mapToListDto(content, userPage);
+        List<UserDto> content = userPage.getContent().stream().map(userMapper::toDto).collect(Collectors.toList());
+        return userMapper.toPageDto(content, userPage);
     }
 
     @Override
     public UserDto getUserById(Long id) {
-        UserEntity user = userRepository.findById(id)
+        UserEntity user = userRepository.findUserWithShopById(id)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
-        return UserMapper.mapToDto(user);
+        return userMapper.toDto(user);
     }
 
     @Override
     public UserDto getUserByToken() {
         UserEntity currentUser = securityUtils.getCurrentUser();
-        return UserMapper.mapToDto(currentUser);
+        return userMapper.toDto(currentUser);
     }
 
     @Transactional
@@ -67,7 +68,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
         user.getRoles().clear();
         userRepository.deleteById(id);
-        return UserMapper.mapToDto(user);
+        return userMapper.toDto(user);
     }
 
     @Override
@@ -84,7 +85,7 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
-        return UserMapper.mapToDto(userEntity);
+        return userMapper.toDto(userEntity);
     }
 
     @Override
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
-        return UserMapper.mapToDto(userEntity);
+        return userMapper.toDto(userEntity);
     }
 
 }

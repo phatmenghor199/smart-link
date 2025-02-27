@@ -21,7 +21,7 @@ public class BannerEntity extends BaseEntity {
     private String description;
     private String imageUrl;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id")
     private ShopEntity shop;
 }

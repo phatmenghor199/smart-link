@@ -41,7 +41,6 @@ public class ShopServiceImpl implements ShopService {
             shopPage = shopRepository.findAll(pageable);
         }
         List<ShopResponseDto> content = shopPage.getContent().stream().map(shopMapper::toDto).toList();
-        ;
         log.info("Shop found: {}", content);
         return shopMapper.mapToListDto(content, shopPage);
     }
@@ -50,14 +49,20 @@ public class ShopServiceImpl implements ShopService {
     @Override
     public ShopResponseDto createShopForUser(Long userId, ShopRequestDto shopRequestDto) {
 
+        log.info("User id is : {}", userId);
+        log.info("Shop request is : {}", shopRequestDto);
+
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException(String.format(ErrorMessages.USER_NOT_FOUND, userId)));
         // Ensure user does not already have a shop
         if (user.getShop() != null) {
+            log.error("User already manages a shop");
             throw new RuntimeException(ErrorMessages.USER_ALREADY_MANAGES_SHOP);
         }
+
         ShopEntity shop = shopMapper.toEntity(shopRequestDto);
-//        // Associate user with the shop
+        shop.setUser(user);
         user.setShop(shop);
+
         shop = shopRepository.save(shop);
         return shopMapper.toDto(shop);
     }

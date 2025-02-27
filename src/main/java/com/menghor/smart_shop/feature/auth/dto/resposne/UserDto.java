@@ -1,5 +1,7 @@
 package com.menghor.smart_shop.feature.auth.dto.resposne;
 
+import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.feature.customer.dto.resposne.ShopResponseDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +15,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class UserDto {
     private Long id;
-    private String email;
-    private String userRole;
+    private String username;
+    private RoleEnum userRole;
+    private ShopResponseDto shop;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

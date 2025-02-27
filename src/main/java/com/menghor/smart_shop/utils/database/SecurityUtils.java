@@ -4,11 +4,14 @@ import com.menghor.smart_shop.constants.ErrorMessages;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
+import com.menghor.smart_shop.feature.customer.models.BannerEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @Slf4j
@@ -39,5 +42,31 @@ public class SecurityUtils {
 
         log.info("User with email {} successfully retrieved", username);
         return user;
+    }
+
+    // Get the user ID from the token (usually the principal)
+    public Long getUserIdFromToken() {
+        // Assuming the token stores the userId as the principal
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof org.springframework.security.core.userdetails.User user) {
+            String username = user.getUsername();
+            // Retrieve the userId from the username or other logic
+            UserEntity currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new NotFoundException(ErrorMessages.EMAIL_NOT_FOUND));
+            return currentUser.getId();
+        } else {
+            throw new NotFoundException("Authentication principal is not of expected type.");
+        }
+    }
+
+    // Get the shop ID associated with the current user
+    public Long getShopIdFromToken() {
+        UserEntity user = getCurrentUser();
+        if (user.getShop() == null) {
+            throw new NotFoundException(ErrorMessages.SHOP_NOT_FOUND);
+        }
+        return user.getShop().getId();
     }
 }

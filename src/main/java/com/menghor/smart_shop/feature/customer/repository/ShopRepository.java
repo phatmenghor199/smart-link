@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ShopRepository extends JpaRepository<ShopEntity, Long> {
     Page<ShopEntity> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
+    boolean existsByIdAndUserId(Long id, Long userId);
 }
