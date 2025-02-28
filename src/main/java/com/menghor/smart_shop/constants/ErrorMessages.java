@@ -20,4 +20,5 @@ public class ErrorMessages {
     public static final String SHOP_NOT_FOUND_BY_USER = "Shop not found for user id %d";
 
     public static final String USER_DOES_NOT_OWN_SHOP = "User with id %d does not own shop with id %d";
+
 }
