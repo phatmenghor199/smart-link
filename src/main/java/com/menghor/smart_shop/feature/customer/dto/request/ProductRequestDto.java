@@ -4,6 +4,7 @@ import com.menghor.smart_shop.enumations.DiscountType;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class ProductRequestDto {
@@ -17,4 +18,6 @@ public class ProductRequestDto {
     private Double discountValue; // Discount value (e.g., 10% or $5)
     private LocalDate discountStartDate; // Discount start date
     private LocalDate discountEndDate; // Discount end date
+
+    private List<ProductSizeRequestDto> sizes;
 }

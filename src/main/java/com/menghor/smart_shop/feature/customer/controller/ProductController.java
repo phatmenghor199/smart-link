@@ -2,6 +2,7 @@ package com.menghor.smart_shop.feature.customer.controller;
 
 import com.menghor.smart_shop.exceptoins.response.ApiResponse;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
+import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,15 @@ public class ProductController {
 
         log.info("Received request to create product");
         return new ApiResponse<>("Success", "Product created successfully", productService.createProduct(createRequest));
+    }
+
+    /**
+     * Add sizes to a product
+     */
+    @PostMapping("/{productId}/sizes")
+    public ResponseEntity<ProductResponseDto> addSizesToProduct(@PathVariable Long productId, @RequestBody List<ProductSizeRequestDto> sizeRequestDtos) {
+        ProductResponseDto productResponse = productService.addSizesToProduct(productId, sizeRequestDtos);
+        return ResponseEntity.ok(productResponse);
     }
 
     /**
@@ -61,6 +71,22 @@ public class ProductController {
         log.info("Received request to update category by id");
         final ProductResponseDto productResponseDto = productService.updateProduct(productId, requestDto);
         return new ApiResponse<>("Success", "Product updated by id successfully", productResponseDto);
+    }
+
+    /**
+     * update product size by id
+     */
+    @PutMapping("/{productId}/sizes/{sizeId}")
+    public ResponseEntity<ProductResponseDto> updateProductSize(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @RequestBody ProductSizeRequestDto sizeRequestDto) {
+
+        // Call the service to update the product size
+        ProductResponseDto updatedProduct = productService.updateProductSize(productId, sizeId, sizeRequestDto);
+
+        // Return the updated product response
+        return ResponseEntity.ok(updatedProduct);
     }
 
     /**

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class ProductResponseDto {
@@ -22,6 +23,8 @@ public class ProductResponseDto {
     private Double discountValue;
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
+
+    private List<ProductSizeResponseDto> sizes;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

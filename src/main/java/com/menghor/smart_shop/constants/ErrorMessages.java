@@ -1,5 +1,7 @@
 package com.menghor.smart_shop.constants;
 
+import java.util.Locale;
+
 public class ErrorMessages {
     public static final String USER_NOT_FOUND = "User id %d could not be found";
     public static final String EMAIL_NOT_FOUND = "User with email %s not found";
@@ -21,4 +23,7 @@ public class ErrorMessages {
 
     public static final String USER_DOES_NOT_OWN_SHOP = "User with id %d does not own shop with id %d";
 
+    public static final String PRODUCT_SIZE_NOT_FOUND = "Product size id %d could not be found";
+
+    public static final String PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT = "Product size id %d is not associated with product id %d";
 }
