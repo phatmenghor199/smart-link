@@ -1,5 +1,7 @@
 package com.menghor.smart_shop.feature.auth.models;
 
+import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import lombok.Data;
@@ -29,6 +31,11 @@ public class UserEntity extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
     private List<Role> roles = new ArrayList<>();
 
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private ShopEntity shop;  // This links the user to a shop (one-to-one)
+
 }

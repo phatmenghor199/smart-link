@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface ProductSizeRepository extends JpaRepository<ProductSizeEntity, Long> {
     List<ProductSizeEntity> findByDiscountEndDateBefore(LocalDate now);
+    List<ProductSizeEntity> findByProductId(Long productId);
 }

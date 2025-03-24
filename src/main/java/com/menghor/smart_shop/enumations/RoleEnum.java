@@ -5,5 +5,4 @@ public enum RoleEnum {
     MANAGER,      // Manages the platform but with some restrictions
     DEVELOPER,    // Developer
     SHOP_ADMIN,   // ShopEntity admin can manage the shop
-    SHOP_STAFF    // ShopEntity staff with limited permissions
 }

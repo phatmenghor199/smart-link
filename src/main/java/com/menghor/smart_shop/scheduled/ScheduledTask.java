@@ -1,14 +1,15 @@
 package com.menghor.smart_shop.scheduled;
 
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
+import com.menghor.smart_shop.feature.customer.models.ProductSizeEntity;
 import com.menghor.smart_shop.feature.customer.repository.ProductRepository;
+import com.menghor.smart_shop.feature.customer.repository.ProductSizeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -17,6 +18,7 @@ import java.util.List;
 public class ScheduledTask {
 
     private final ProductRepository productRepository;
+    private final ProductSizeRepository productSizeRepository;
 
     @Scheduled(cron = "0 0 0 * * ?") // Runs daily at midnight
     public void removeExpiredPromotions() {
@@ -26,13 +28,17 @@ public class ScheduledTask {
         List<ProductEntity> expiredProducts = productRepository.findByDiscountEndDateBefore(now);
 
         for (ProductEntity product : expiredProducts) {
-            // Clear expired promotions
-            product.setDiscountType(null);
-            product.setDiscountValue(null);
-            product.setDiscountStartDate(null);
-            product.setDiscountEndDate(null);
-            log.info("Removing promotion from product: {}", product);
+            product.resetDiscount();
+            log.info("Resetting discount for product: {}", product.getName());
             productRepository.save(product);
+        }
+
+        // Reset expired discounts for product sizes
+        List<ProductSizeEntity> expiredSizes = productSizeRepository.findByDiscountEndDateBefore(now);
+        for (ProductSizeEntity size : expiredSizes) {
+            size.resetDiscount();
+            log.info("Resetting discount for product size: {}", size.getSize());
+            productSizeRepository.save(size);
         }
     }
 }

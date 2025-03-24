@@ -2,6 +2,7 @@ package com.menghor.smart_shop.feature.order.controller;
 
 import java.util.List;
 
+import com.menghor.smart_shop.feature.order.dto.request.OrderCheckoutRequestDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -81,4 +82,13 @@ public class OrderController {
         return new ApiResponse<>("Success", "Updated order status  successfully", updatedOrder);
     }
 
+    /**
+     * Checkout cart and create order
+     */
+    @PostMapping("/checkout")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<OrderResponseDto> checkout(@RequestBody OrderCheckoutRequestDto orderRequestDto) {
+        log.info("Checking out cart and creating order");
+        return new ApiResponse<>("Success", "Order created successfully", orderService.checkout(orderRequestDto));
+    }
 }

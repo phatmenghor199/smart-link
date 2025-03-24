@@ -5,6 +5,7 @@ import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.customer.models.BannerEntity;
+import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -68,5 +69,13 @@ public class SecurityUtils {
             throw new NotFoundException(ErrorMessages.SHOP_NOT_FOUND);
         }
         return user.getShop().getId();
+    }
+
+    public ShopEntity getShopFromToken() {
+        UserEntity user = getCurrentUser();
+        if (user.getShop() == null) {
+            throw new NotFoundException(ErrorMessages.SHOP_NOT_FOUND);
+        }
+        return user.getShop();
     }
 }

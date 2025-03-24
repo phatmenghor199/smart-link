@@ -1,6 +1,8 @@
 package com.menghor.smart_shop.feature.order.model;
 
+import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
+import com.menghor.smart_shop.feature.customer.models.ProductSizeEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,13 +20,21 @@ public class OrderItemEntity extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
-    private OrderEntity order; // Each order item belongs to one order
+    private OrderEntity order;
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
-    private ProductEntity product; // Each order item is linked to a product
+    private ProductEntity product;
 
-    private Integer quantity; // Quantity of the product in the order
-    private Double price; // Price of the product when the order was placed
+    @ManyToOne
+    @JoinColumn(name = "size_id")
+    private ProductSizeEntity size;
+
+    private Integer quantity;
+    private Double price;
+
+    @Enumerated(EnumType.STRING)
+    private DiscountType discountType;
+    private Double discountValue;
 
 }

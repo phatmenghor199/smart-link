@@ -2,8 +2,10 @@ package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.List;
@@ -32,4 +34,5 @@ public class ShopEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL)
     private List<BannerEntity> banners; // One shop can have many banners
+
 }

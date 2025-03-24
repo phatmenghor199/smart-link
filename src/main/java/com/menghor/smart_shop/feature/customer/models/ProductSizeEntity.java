@@ -33,6 +33,8 @@ public class ProductSizeEntity extends BaseEntity {
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
 
+    private Integer stockQuantity; // Add stock quantity field
+
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
     private ProductEntity product; // Each size belongs to a product

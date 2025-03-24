@@ -62,6 +62,16 @@ public class ProductController {
     }
 
     /**
+     * Get all product
+     */
+    @GetMapping()
+    public ApiResponse<List<ProductResponseDto>> getAllProduct() {
+        log.info("Received request to get all product");
+        final List<ProductResponseDto> productsByShop = productService.getAllProducts();
+        return new ApiResponse<>("Success", "All Product response successfully", productsByShop);
+    }
+
+    /**
      * update product by id
      */
     @PutMapping("/{productId}")
@@ -108,7 +118,21 @@ public class ProductController {
         return new ApiResponse<>("Success", "Expired discounts have been reset.", "");
     }
 
-    // Endpoint to reset the discount for a product by ID
+    /**
+     * reset expired discount for a product by ID
+     */
+    @PostMapping("/{productId}/reset-expired-discount")
+    public ApiResponse<ProductResponseDto> resetDiscountExpiredForProduct(@PathVariable Long productId) {
+
+        log.info("Received request expired reset discount for product with ID: {}", productId);
+
+        ProductResponseDto updatedProduct = productService.resetExpiredDiscountForProduct(productId);
+        return new ApiResponse<>("Success", "Product discount has been reset.", updatedProduct);
+    }
+
+    /**
+     * reset discount for a product by ID
+     */
     @PostMapping("/{productId}/reset-discount")
     public ApiResponse<ProductResponseDto> resetDiscountForProduct(@PathVariable Long productId) {
 
@@ -116,5 +140,24 @@ public class ProductController {
 
         ProductResponseDto updatedProduct = productService.resetDiscountForProduct(productId);
         return new ApiResponse<>("Success", "Product discount has been reset.", updatedProduct);
+    }
+
+    /**
+     * Get all products with active promotions
+     */
+    @GetMapping("/promotions")
+    public ApiResponse<List<ProductResponseDto>> getAllProductsPromotions() {
+        log.info("Received request to get all products promotions");
+        List<ProductResponseDto> products = productService.getProductsWithActivePromotions();
+        return new ApiResponse<>("Success", "All products promotions response successfully", products);
+    }
+
+    /**
+     * Get all products by shop with active promotions
+     */
+    @GetMapping("/shop/promotions")
+    public ApiResponse<List<ProductResponseDto>> getProductsWithActivePromotionsByShop() {
+        List<ProductResponseDto> products = productService.getProductsWithActivePromotionsByShop();
+        return new ApiResponse<>("Success", "All products promotions by shop response successfully", products);
     }
 }
