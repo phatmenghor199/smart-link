@@ -41,11 +41,15 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/webjars/**",
                                 "/swagger-resources/**",
-                                "/api/v1/auth/**"
+                                "/api/v1/auth/**",
+                                "/api/v1/plans/**", // Allow public access to plan information
+                                "/api/v1/subscriptions/check/**" // Allow checking subscription status
                         ).permitAll()
+//                        .requestMatchers("/api/v1/subscriptions/**").hasAnyRole("ADMIN", "MANAGER", "DEVELOPER") // Only admin/manager can manage subscriptions
                         .anyRequest().authenticated()
                 )
-                .httpBasic(httpBasic -> {});
+                .httpBasic(httpBasic -> {
+                });
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();

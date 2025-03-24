@@ -44,12 +44,6 @@ jwt:
 #     password: Hour1819
 #     driver-class-name: org.postgresql.Driver
 
-logging:
-  level:
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
-    org.springdoc: DEBUG
-
 springdoc:
   swagger-ui:
     path: /swagger-ui/index.html

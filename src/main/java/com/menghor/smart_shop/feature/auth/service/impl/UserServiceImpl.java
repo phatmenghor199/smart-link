@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordByAdminRequestDto;
@@ -11,9 +12,13 @@ import com.menghor.smart_shop.feature.auth.mapper.UserMapper;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.auth.service.UserService;
+import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
+import com.menghor.smart_shop.feature.setting.mapper.SubscriptionMapper;
+import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
+import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,17 +26,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionMapper subscriptionMapper;
 
     @Override
     public UserResponseDto getAllUser(int pageNo, int pageSize, String search) {
@@ -44,7 +53,16 @@ public class UserServiceImpl implements UserService {
         } else {
             userPage = userRepository.findAll(pageable);
         }
-        List<UserDto> content = userPage.getContent().stream().map(userMapper::toDto).collect(Collectors.toList());
+
+        // Map users with subscription info
+        List<UserDto> content = userPage.getContent().stream()
+                .map(user -> {
+                    UserDto userDto = userMapper.toDto(user);
+                    enrichUserWithSubscription(userDto, user.getId());
+                    return userDto;
+                })
+                .collect(Collectors.toList());
+
         return userMapper.toPageDto(content, userPage);
     }
 
@@ -52,13 +70,20 @@ public class UserServiceImpl implements UserService {
     public UserDto getUserById(Long id) {
         UserEntity user = userRepository.findUserWithShopById(id)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
-        return userMapper.toDto(user);
+
+        UserDto userDto = userMapper.toDto(user);
+        enrichUserWithSubscription(userDto, id);
+
+        return userDto;
     }
 
     @Override
     public UserDto getUserByToken() {
         UserEntity currentUser = securityUtils.getCurrentUser();
-        return userMapper.toDto(currentUser);
+        UserDto userDto = userMapper.toDto(currentUser);
+        enrichUserWithSubscription(userDto, currentUser.getId());
+
+        return userDto;
     }
 
     @Transactional
@@ -68,6 +93,9 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
         user.getRoles().clear();
         userRepository.deleteById(id);
+
+        // No need to enrich with subscription since user is being deleted
+
         return userMapper.toDto(user);
     }
 
@@ -85,7 +113,11 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
-        return userMapper.toDto(userEntity);
+
+        UserDto userDto = userMapper.toDto(userEntity);
+        enrichUserWithSubscription(userDto, userEntity.getId());
+
+        return userDto;
     }
 
     @Override
@@ -103,7 +135,27 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
-        return userMapper.toDto(userEntity);
+
+        UserDto userDto = userMapper.toDto(userEntity);
+        enrichUserWithSubscription(userDto, userEntity.getId());
+
+        return userDto;
     }
 
+    /**
+     * Enrich user DTO with subscription information
+     */
+    private void enrichUserWithSubscription(UserDto userDto, Long userId) {
+        // Get active subscription if exists
+        Optional<SubscriptionEntity> subscription =
+                subscriptionRepository.findActiveSubscriptionForUser(userId, LocalDateTime.now());
+
+        if (subscription.isPresent()) {
+            SubscriptionResponseDto subscriptionDto = subscriptionMapper.toDto(subscription.get());
+            userDto.setActiveSubscription(subscriptionDto);
+            userDto.setHasActiveSubscription(true);
+        } else {
+            userDto.setHasActiveSubscription(false);
+        }
+    }
 }
