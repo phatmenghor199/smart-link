@@ -1,11 +1,12 @@
 package com.menghor.smart_shop.utils.database;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import lombok.Data;
 
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
+
 import java.time.LocalDateTime;
 
 @MappedSuperclass

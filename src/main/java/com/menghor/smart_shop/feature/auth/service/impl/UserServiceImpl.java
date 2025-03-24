@@ -12,6 +12,7 @@ import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.auth.service.UserService;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -20,7 +21,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 

@@ -1,11 +1,11 @@
 package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.utils.database.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)

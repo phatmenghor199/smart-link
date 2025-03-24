@@ -14,6 +14,7 @@ import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.RoleRepository;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.auth.security.JWTGenerator;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
 import java.util.Collections;
 import java.util.Optional;
 

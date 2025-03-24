@@ -4,10 +4,9 @@ import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
 import com.menghor.smart_shop.feature.customer.models.ProductSizeEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import javax.persistence.*;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -36,5 +35,4 @@ public class OrderItemEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private DiscountType discountType;
     private Double discountValue;
-
 }

@@ -5,10 +5,10 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
-import org.springdoc.core.GroupedOpenApi;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Components;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 
 @Configuration
 @SecurityScheme(
@@ -22,23 +22,21 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    public GroupedOpenApi publicApi() {
-        return GroupedOpenApi.builder()
-                .group("public")
-                .pathsToMatch("/**") // match all paths
-                .addOperationCustomizer((operation, handlerMethod) -> {
-                    // Add security requirements to all operations
-                    operation.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
-                    return operation;
-                })
-                .build();
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new Components()
+                        .addSecuritySchemes("bearerAuth",
+                                new io.swagger.v3.oas.models.security.SecurityScheme()
+                                        .name("bearerAuth")
+                                        .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")
+                        )
+                )
+                .info(new Info()
+                        .title("Smart Shop API")
+                        .version("1.0")
+                        .description("Smart Shop API Documentation"));
     }
-
-    @Bean
-    public Info apiInfo() {
-        return new Info().title("Smart ShopEntity API")
-                .version("1.0")
-                .description("Smart ShopEntity API Documentation");
-    }
-
 }

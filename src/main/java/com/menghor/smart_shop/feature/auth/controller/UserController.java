@@ -8,10 +8,10 @@ import com.menghor.smart_shop.feature.auth.dto.resposne.UserDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserResponseDto;
 import com.menghor.smart_shop.feature.auth.service.UserService;
 import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/user")

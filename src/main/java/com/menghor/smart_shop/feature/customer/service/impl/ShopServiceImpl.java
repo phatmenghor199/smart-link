@@ -11,6 +11,7 @@ import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.ShopService;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,7 +19,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.List;
 
 @Service

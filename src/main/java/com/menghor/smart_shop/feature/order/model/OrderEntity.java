@@ -6,11 +6,11 @@ import com.menghor.smart_shop.enumations.OrderFilterType;
 import com.menghor.smart_shop.enumations.OrderStatus;
 import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)

@@ -15,11 +15,11 @@ import com.menghor.smart_shop.feature.customer.repository.ProductSizeRepository;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;

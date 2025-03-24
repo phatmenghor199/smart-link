@@ -21,31 +21,25 @@ public class SecurityConfig {
     private final JwtAuthEntryPoint authEntryPoint;
     private final CustomUserDetailsService userDetailsService;
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors().and().csrf().disable()
-//                .csrf().disable()
-                .exceptionHandling()
-                .authenticationEntryPoint(authEntryPoint)
-                .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeRequests()
-                .antMatchers("/api/v1/auth/**", "/api/v1/images/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic();
+                .cors(cors -> cors.configure(http))
+                .csrf(csrf -> csrf.disable())
+                .exceptionHandling(exceptionHandling ->
+                        exceptionHandling.authenticationEntryPoint(authEntryPoint)
+                )
+                .sessionManagement(sessionManagement ->
+                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/images/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .httpBasic(httpBasic -> {});
+
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
-    }
-
-    protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/swagger-ui/**", "/v3/api-docs/**").authenticated() // Protect Swagger
-                .anyRequest().permitAll();
     }
 
     @Bean

@@ -1,10 +1,9 @@
 package com.menghor.smart_shop.feature.setting.model;
 
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
-import javax.persistence.*;
 
 @Setter
 @Getter

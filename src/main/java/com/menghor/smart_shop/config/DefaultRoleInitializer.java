@@ -3,11 +3,11 @@ package com.menghor.smart_shop.config;
 import com.menghor.smart_shop.enumations.RoleEnum;
 import com.menghor.smart_shop.feature.auth.models.Role;
 import com.menghor.smart_shop.feature.auth.repository.RoleRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import javax.transaction.Transactional;
 
 @Component
 public class DefaultRoleInitializer {
@@ -26,7 +26,6 @@ public class DefaultRoleInitializer {
             roleRepository.save(new Role(RoleEnum.MANAGER));
             roleRepository.save(new Role(RoleEnum.DEVELOPER));
             roleRepository.save(new Role(RoleEnum.SHOP_ADMIN));
-            roleRepository.save(new Role(RoleEnum.SHOP_STAFF));
         }
     }
 }

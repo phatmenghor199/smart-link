@@ -15,13 +15,12 @@ import com.menghor.smart_shop.feature.order.repository.CartItemRepository;
 import com.menghor.smart_shop.feature.order.repository.CartRepository;
 import com.menghor.smart_shop.feature.order.service.CartService;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

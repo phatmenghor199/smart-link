@@ -2,10 +2,11 @@ package com.menghor.smart_shop.feature.auth.models;
 
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.*;
+
 
 @Setter
 @Getter

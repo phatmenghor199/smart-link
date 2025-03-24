@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: smart-shop
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  datasource:
+    url: jdbc:postgresql://ep-polished-flower-a1hcns4i-pooler.ap-southeast-1.aws.neon.tech:5432/smart_link?sslmode=require
+    username: neondb_owner
+    password: npg_xWZ4N8SnXHkl
+    driver-class-name: org.postgresql.Driver
+    # Optional connection pool settings for better performance
+    # hikari:
+    #   maximum-pool-size: 10
+    #   minimum-idle: 2
+    #   idle-timeout: 30000
+    #   connection-timeout: 20000
+    #   max-lifetime: 1800000
+  # main:
+  #   allow-circular-references: true
+
+server:
+  port: 8080
+
+jwt:
+  secret:
+    key: da2bd42bef8f9f957d647ed13571d35b59c7055fb723eacdb05154878da17d77d3180385fc232cab38bded0fc7dbda0d439cc275e91164ade266d64d50633bc7
+  expiration-min: 9999999999999
+
+# Alternative local database configuration
+# spring:
+#   datasource:
+#     url: jdbc:postgresql://localhost:5433/smart_link
+#     username: postgres
+#     password: Hour1819
+#     driver-class-name: org.postgresql.Driver
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

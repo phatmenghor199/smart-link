@@ -5,13 +5,13 @@ import com.menghor.smart_shop.exceptoins.response.ApiResponse;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.BannerResponseDto;
 import com.menghor.smart_shop.feature.customer.service.BannerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
 
 @RestController

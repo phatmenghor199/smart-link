@@ -2,11 +2,9 @@ package com.menghor.smart_shop.feature.order.model;
 
 import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-
-import javax.persistence.*;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
