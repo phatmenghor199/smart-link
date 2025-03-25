@@ -1,10 +1,12 @@
 package com.menghor.smart_shop.feature.auth.security;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.feature.auth.models.Role;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
-import com.menghor.smart_shop.feature.setting.service.SubscriptionService;
+import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
+import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,14 +14,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class SubscriptionInterceptor implements HandlerInterceptor {
 
-    private final SubscriptionService subscriptionService;
+    private final SubscriptionRepository subscriptionRepository;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -46,27 +50,16 @@ public class SubscriptionInterceptor implements HandlerInterceptor {
                 .anyMatch(role -> role.getName() == RoleEnum.SHOP_ADMIN);
 
         if (isShopAdmin) {
-            // Check subscription status for shop/product operations
-            if (isShopOperation(request.getRequestURI())) {
-                boolean hasActiveSubscription = subscriptionService.hasActiveSubscription(user.getId());
+            // Check if user has an active subscription
+            Optional<SubscriptionEntity> activeSubscription =
+                    subscriptionRepository.findActiveSubscriptionForUser(user.getId(), LocalDateTime.now());
 
-                if (!hasActiveSubscription) {
-                    log.warn("User ID: {} attempted to access shop operation without an active subscription", user.getId());
-                    throw new BadRequestException("Your subscription has expired. Please renew your subscription to continue using shop features.");
-                }
+            if (activeSubscription.isEmpty()) {
+                log.warn("User ID: {} attempted to access features without an active subscription", user.getId());
+                throw new BadRequestException("Your subscription has expired. Please renew your subscription to continue using the platform.");
             }
         }
 
         return true;
-    }
-
-    private boolean isShopOperation(String requestURI) {
-        // Define URIs that should be restricted to active subscribers
-        return requestURI.contains("/api/v1/shop") ||
-                requestURI.contains("/api/v1/product") ||
-                requestURI.contains("/api/v1/category") ||
-                requestURI.contains("/api/v1/banner") ||
-                requestURI.contains("/api/v1/order") ||
-                requestURI.contains("/api/v1/cart");
     }
 }

@@ -1,7 +1,6 @@
 package com.menghor.smart_shop.feature.auth.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
-import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordByAdminRequestDto;
@@ -12,9 +11,7 @@ import com.menghor.smart_shop.feature.auth.mapper.UserMapper;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.auth.service.UserService;
-import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.SubscriptionMapper;
-import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
 import jakarta.transaction.Transactional;
@@ -26,12 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -56,53 +48,10 @@ public class UserServiceImpl implements UserService {
             userPage = userRepository.findAll(pageable);
         }
 
-        // Get all user IDs to fetch subscriptions in bulk
-        List<Long> userIds = userPage.getContent().stream()
-                .map(UserEntity::getId)
-                .collect(Collectors.toList());
+        // Use the bulk enrichment method in UserMapper
+        List<UserDto> content = userMapper.enrichUsersWithSubscriptions(userPage.getContent());
 
-        // Fetch all active subscriptions for these users in a single query
-        Map<Long, SubscriptionEntity> activeSubscriptions = new HashMap<>();
-        if (!userIds.isEmpty()) {
-            LocalDateTime now = LocalDateTime.now();
-
-            // Use the batch query method to get all active subscriptions
-            List<SubscriptionEntity> subscriptions = subscriptionRepository.findActiveSubscriptionsForUsers(userIds, now);
-
-            // Create a map of userId -> subscription for quick lookup
-            for (SubscriptionEntity subscription : subscriptions) {
-                activeSubscriptions.put(subscription.getUser().getId(), subscription);
-            }
-
-            log.info("Found {} active subscriptions for {} users", subscriptions.size(), userIds.size());
-        }
-
-        // Map users with subscription info
-        List<UserDto> content = userPage.getContent().stream()
-                .map(user -> {
-                    UserDto userDto = userMapper.toDto(user);
-
-                    // Ensure hasActiveSubscription is never null (setting default)
-                    if (userDto.getHasActiveSubscription() == null) {
-                        userDto.setHasActiveSubscription(false);
-                    }
-
-                    // Use the subscription from our map if it exists
-                    SubscriptionEntity subscription = activeSubscriptions.get(user.getId());
-                    if (subscription != null) {
-                        SubscriptionResponseDto subscriptionDto = subscriptionMapper.toDto(subscription);
-                        userDto.setActiveSubscription(subscriptionDto);
-                        userDto.setHasActiveSubscription(true);
-                    } else {
-                        // Explicitly set to false if no subscription found
-                        userDto.setActiveSubscription(null);
-                        userDto.setHasActiveSubscription(false);
-                    }
-
-                    return userDto;
-                })
-                .collect(Collectors.toList());
-
+        // Create the UserResponseDto using the mapper
         return userMapper.toPageDto(content, userPage);
     }
 
@@ -111,19 +60,15 @@ public class UserServiceImpl implements UserService {
         UserEntity user = userRepository.findUserWithShopById(id)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
 
-        UserDto userDto = userMapper.toDto(user);
-        enrichUserWithSubscription(userDto, id);
-
-        return userDto;
+        List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(user));
+        return enrichedUsers.get(0);
     }
 
     @Override
     public UserDto getUserByToken() {
         UserEntity currentUser = securityUtils.getCurrentUser();
-        UserDto userDto = userMapper.toDto(currentUser);
-        enrichUserWithSubscription(userDto, currentUser.getId());
-
-        return userDto;
+        List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(currentUser));
+        return enrichedUsers.get(0);
     }
 
     @Transactional
@@ -151,10 +96,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
 
-        UserDto userDto = userMapper.toDto(userEntity);
-        enrichUserWithSubscription(userDto, userEntity.getId());
-
-        return userDto;
+        return userMapper.toDto(userEntity);
     }
 
     @Override
@@ -173,26 +115,6 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         UserEntity userEntity = userRepository.save(user);
 
-        UserDto userDto = userMapper.toDto(userEntity);
-        enrichUserWithSubscription(userDto, userEntity.getId());
-
-        return userDto;
-    }
-
-    /**
-     * Enrich user DTO with subscription information
-     */
-    private void enrichUserWithSubscription(UserDto userDto, Long userId) {
-        // Get active subscription if exists
-        Optional<SubscriptionEntity> subscription =
-                subscriptionRepository.findActiveSubscriptionForUser(userId, LocalDateTime.now());
-
-        if (subscription.isPresent()) {
-            SubscriptionResponseDto subscriptionDto = subscriptionMapper.toDto(subscription.get());
-            userDto.setActiveSubscription(subscriptionDto);
-            userDto.setHasActiveSubscription(true);
-        } else {
-            userDto.setHasActiveSubscription(false);
-        }
+        return userMapper.toDto(userEntity);
     }
 }

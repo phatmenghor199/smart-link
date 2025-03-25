@@ -12,20 +12,17 @@ import com.menghor.smart_shop.feature.setting.mapper.SubscriptionMapper;
 import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.mapstruct.AfterMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
+@Slf4j
 public abstract class UserMapper {
 
     @Autowired
@@ -38,17 +35,52 @@ public abstract class UserMapper {
     @Mapping(source = "roles", target = "userRole")
     @Mapping(source = "shop", target = "shop")
     @Mapping(target = "activeSubscription", ignore = true)
-    @Mapping(target = "hasActiveSubscription", constant = "false")
+    @Mapping(target = "hasActiveSubscription", ignore = true)
     public abstract UserDto toDto(UserEntity user);
 
     public abstract UserResponseDto toPageDto(List<UserDto> content, Page<UserEntity> userPage);
 
-    @AfterMapping
-    protected void setDefaultValues(@MappingTarget UserDto userDto) {
-        // Ensure hasActiveSubscription is never null
-        if (userDto.getHasActiveSubscription() == null) {
-            userDto.setHasActiveSubscription(false);
-        }
+    /**
+     * Bulk method to fetch and set active subscriptions for multiple users
+     */
+    public List<UserDto> enrichUsersWithSubscriptions(List<UserEntity> users) {
+        // Get all user IDs
+        List<Long> userIds = users.stream()
+                .map(UserEntity::getId)
+                .collect(Collectors.toList());
+
+        // Fetch active subscriptions for these users in a single query
+        LocalDateTime now = LocalDateTime.now();
+        List<SubscriptionEntity> activeSubscriptions = subscriptionRepository
+                .findActiveSubscriptionsForUsers(userIds, now);
+
+        // Create a map of user ID to their most recent active subscription
+        Map<Long, SubscriptionEntity> subscriptionMap = activeSubscriptions.stream()
+                .collect(Collectors.toMap(
+                        sub -> sub.getUser().getId(),
+                        sub -> sub,
+                        (sub1, sub2) -> sub1.getCreatedAt().isAfter(sub2.getCreatedAt()) ? sub1 : sub2
+                ));
+
+        // Map users with subscription info
+        return users.stream()
+                .map(user -> {
+                    UserDto userDto = toDto(user);
+
+                    // Use the active subscription from our map if it exists
+                    SubscriptionEntity subscription = subscriptionMap.get(user.getId());
+                    if (subscription != null) {
+                        SubscriptionResponseDto subscriptionDto = subscriptionMapper.toDto(subscription);
+                        userDto.setActiveSubscription(subscriptionDto);
+                        userDto.setHasActiveSubscription(true);
+                    } else {
+                        userDto.setActiveSubscription(null);
+                        userDto.setHasActiveSubscription(false);
+                    }
+
+                    return userDto;
+                })
+                .collect(Collectors.toList());
     }
 
     public RoleEnum mapRoles(List<Role> roles) {
@@ -69,26 +101,4 @@ public abstract class UserMapper {
         shopDto.setUpdatedAt(shop.getUpdatedAt());
         return shopDto;
     }
-
-    // Map active subscription
-    public SubscriptionResponseDto mapActiveSubscription(UserEntity user) {
-        if (user == null || user.getId() == null) {
-            return null;
-        }
-
-        Optional<SubscriptionEntity> subscription =
-                subscriptionRepository.findActiveSubscriptionForUser(user.getId(), LocalDateTime.now());
-
-        return subscription.map(subscriptionMapper::toDto).orElse(null);
-    }
-
-    // Check if user has active subscription
-    public Boolean checkHasActiveSubscription(UserEntity user) {
-        if (user == null || user.getId() == null) {
-            return false;
-        }
-
-        return subscriptionRepository.hasActiveSubscription(user.getId(), LocalDateTime.now());
-    }
-
 }

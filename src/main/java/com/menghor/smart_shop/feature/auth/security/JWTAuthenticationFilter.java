@@ -1,6 +1,5 @@
 package com.menghor.smart_shop.feature.auth.security;
 
-import com.menghor.smart_shop.enumations.RoleEnum;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
@@ -8,85 +7,95 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Component
+@RequiredArgsConstructor
+@Slf4j
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JWTGenerator tokenGenerator;
-
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private SubscriptionRepository subscriptionRepository;
-
+    private final JWTGenerator tokenGenerator;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final UserRepository userRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String token = getJWTFromRequest(request);
-        if (StringUtils.hasText(token) && tokenGenerator.validateToken(token)) {
-            String username = tokenGenerator.getUsernameFromJWT(token);
+        try {
+            String token = getJWTFromRequest(request);
+            log.debug("Token from request: {}", token);
 
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null,
-                    userDetails.getAuthorities());
-            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            if (StringUtils.hasText(token) && tokenGenerator.validateToken(token)) {
+                String username = tokenGenerator.getUsernameFromJWT(token);
+                log.debug("Username from token: {}", username);
 
-            // Store current user in request for reference by other components
-            Optional<UserEntity> userOpt = userRepository.findByUsername(username);
-            if (userOpt.isPresent()) {
-                UserEntity user = userOpt.get();
-                request.setAttribute("currentUser", user);
+                try {
+                    UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
-                // Check if this is a shop operation and user is a shop admin with an expired subscription
-                if (isShopOperation(request.getRequestURI()) && isShopAdmin(user)) {
-                    boolean hasActiveSubscription = subscriptionRepository.hasActiveSubscription(user.getId(), LocalDateTime.now());
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                    // Store subscription status for reference by other components
-                    request.setAttribute("hasActiveSubscription", hasActiveSubscription);
+                    authenticationToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                    // Store current user in request for reference by other components
+                    Optional<UserEntity> userOpt = userRepository.findByUsername(username);
+                    userOpt.ifPresent(user -> request.setAttribute("currentUser", user));
+
+                } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
+                    // Log the specific authentication failure
+                    log.error("Authentication failed for user {}: {}", username, ex.getMessage());
+
+                    // Clear the security context
+                    SecurityContextHolder.clearContext();
+
+                    // Rethrow to be handled by AuthenticationEntryPoint
+                    throw new AuthenticationException(ex.getMessage()) {};
                 }
             }
+
+            filterChain.doFilter(request, response);
+
+        } catch (Exception e) {
+            log.error("Authentication process failed", e);
+
+            // Clear the security context
+            SecurityContextHolder.clearContext();
+
+            // Rethrow to be handled by AuthenticationEntryPoint
+            throw new AuthenticationException(e.getMessage()) {};
         }
-        filterChain.doFilter(request, response);
     }
 
     private String getJWTFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
+        log.debug("Authorization header: {}", bearerToken);
+
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    private boolean isShopOperation(String requestURI) {
-        // Define URIs that should be restricted to active subscribers
-        return requestURI.contains("/api/v1/shop") ||
-                requestURI.contains("/api/v1/product") ||
-                requestURI.contains("/api/v1/category") ||
-                requestURI.contains("/api/v1/banner") ||
-                requestURI.contains("/api/v1/order") ||
-                requestURI.contains("/api/v1/cart");
-    }
-
-    private boolean isShopAdmin(UserEntity user) {
-        return user.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleEnum.SHOP_ADMIN);
     }
 }

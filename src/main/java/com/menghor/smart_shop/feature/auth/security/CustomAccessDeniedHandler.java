@@ -1,0 +1,99 @@
+package com.menghor.smart_shop.feature.auth.security;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.feature.auth.models.UserEntity;
+import com.menghor.smart_shop.feature.auth.repository.UserRepository;
+import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+
+    private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public void handle(HttpServletRequest request, HttpServletResponse response,
+                       AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        // Get current authentication
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Prepare response
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        // Default error response
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("code", HttpStatus.FORBIDDEN.value());
+        errorResponse.put("status", "failed");
+
+        // Check if we have a user in the context
+        if (authentication != null && authentication.getPrincipal() instanceof User) {
+            // Get username
+            String username = authentication.getName();
+
+            try {
+                // Find the user entity with roles
+                UserEntity user = userRepository.findWithRolesAndShopByUsername(username)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Check if user is a SHOP_ADMIN
+                boolean isShopAdmin = user.getRoles().stream()
+                        .anyMatch(role -> role.getName() == RoleEnum.SHOP_ADMIN);
+
+                if (isShopAdmin) {
+                    // Check subscription status
+                    boolean hasActiveSubscription = subscriptionRepository
+                            .hasActiveSubscription(user.getId(), LocalDateTime.now());
+
+                    if (!hasActiveSubscription) {
+                        // Subscription-specific error
+                        errorResponse.put("message", "No active subscription. Please renew to continue.");
+                        response.setStatus(HttpStatus.PAYMENT_REQUIRED.value()); // 402 Payment Required
+                        log.warn("Access denied for user {} due to inactive subscription", username);
+                    } else {
+                        // Generic access denied
+                        errorResponse.put("message", "Access denied");
+                        response.setStatus(HttpStatus.FORBIDDEN.value());
+                    }
+                } else {
+                    // Non-shop admin users
+                    errorResponse.put("message", "Access denied");
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                }
+            } catch (Exception e) {
+                // Error finding user
+                errorResponse.put("message", "Authentication error");
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                log.error("Error processing access denied for user {}", username, e);
+            }
+        } else {
+            // No authentication details
+            errorResponse.put("message", "Authentication required");
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        }
+
+        // Write the response
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+    }
+}
