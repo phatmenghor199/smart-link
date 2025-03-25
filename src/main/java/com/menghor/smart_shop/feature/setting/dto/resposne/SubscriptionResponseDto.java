@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 public class SubscriptionResponseDto {
     private Long id;
-    private UserDto user;
     private PlanResponseDto plan;
     private LocalDateTime startDate;
     private LocalDateTime endDate;

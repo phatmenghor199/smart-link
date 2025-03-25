@@ -23,25 +23,25 @@ public interface SubscriptionMapper {
     @Mapping(target = "status", ignore = true)
     SubscriptionEntity toEntity(SubscriptionRequestDto dto);
 
-    @Mapping(target = "user", qualifiedByName = "mapUserSummary")
+//    @Mapping(target = "user", qualifiedByName = "mapUserSummary")
     @Mapping(target = "isActive", expression = "java(calculateIsActive(subscription))")
     @Mapping(target = "daysRemaining", expression = "java(calculateDaysRemaining(subscription))")
     SubscriptionResponseDto toDto(SubscriptionEntity subscription);
 
-    @Named("mapUserSummary")
-    default UserDto mapUserSummary(UserEntity user) {
-        if (user == null) return null;
-
-        return UserDto.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .userRole(user.getRoles() != null && !user.getRoles().isEmpty()
-                        ? RoleEnum.valueOf(user.getRoles().get(0).getName().name())
-                        : null)
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-    }
+//    @Named("mapUserSummary")
+//    default UserDto mapUserSummary(UserEntity user) {
+//        if (user == null) return null;
+//
+//        return UserDto.builder()
+//                .id(user.getId())
+//                .username(user.getUsername())
+//                .userRole(user.getRoles() != null && !user.getRoles().isEmpty()
+//                        ? RoleEnum.valueOf(user.getRoles().get(0).getName().name())
+//                        : null)
+//                .createdAt(user.getCreatedAt())
+//                .updatedAt(user.getUpdatedAt())
+//                .build();
+//    }
 
     default Boolean calculateIsActive(SubscriptionEntity subscription) {
         return subscription.getStatus().name().equals("ACTIVE") &&
