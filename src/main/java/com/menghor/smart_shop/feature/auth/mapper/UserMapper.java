@@ -12,8 +12,10 @@ import com.menghor.smart_shop.feature.setting.mapper.SubscriptionMapper;
 import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -35,11 +37,19 @@ public abstract class UserMapper {
 
     @Mapping(source = "roles", target = "userRole")
     @Mapping(source = "shop", target = "shop")
-    @Mapping(target = "activeSubscription", expression = "java(mapActiveSubscription(user))")
-    @Mapping(target = "hasActiveSubscription", expression = "java(checkHasActiveSubscription(user))")
+    @Mapping(target = "activeSubscription", ignore = true)
+    @Mapping(target = "hasActiveSubscription", constant = "false")
     public abstract UserDto toDto(UserEntity user);
 
     public abstract UserResponseDto toPageDto(List<UserDto> content, Page<UserEntity> userPage);
+
+    @AfterMapping
+    protected void setDefaultValues(@MappingTarget UserDto userDto) {
+        // Ensure hasActiveSubscription is never null
+        if (userDto.getHasActiveSubscription() == null) {
+            userDto.setHasActiveSubscription(false);
+        }
+    }
 
     public RoleEnum mapRoles(List<Role> roles) {
         // Handle case if there are roles; for example, pick the first role if available

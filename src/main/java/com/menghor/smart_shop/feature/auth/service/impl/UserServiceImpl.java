@@ -27,7 +27,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -54,11 +56,49 @@ public class UserServiceImpl implements UserService {
             userPage = userRepository.findAll(pageable);
         }
 
+        // Get all user IDs to fetch subscriptions in bulk
+        List<Long> userIds = userPage.getContent().stream()
+                .map(UserEntity::getId)
+                .collect(Collectors.toList());
+
+        // Fetch all active subscriptions for these users in a single query
+        Map<Long, SubscriptionEntity> activeSubscriptions = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+
+            // Use the batch query method to get all active subscriptions
+            List<SubscriptionEntity> subscriptions = subscriptionRepository.findActiveSubscriptionsForUsers(userIds, now);
+
+            // Create a map of userId -> subscription for quick lookup
+            for (SubscriptionEntity subscription : subscriptions) {
+                activeSubscriptions.put(subscription.getUser().getId(), subscription);
+            }
+
+            log.info("Found {} active subscriptions for {} users", subscriptions.size(), userIds.size());
+        }
+
         // Map users with subscription info
         List<UserDto> content = userPage.getContent().stream()
                 .map(user -> {
                     UserDto userDto = userMapper.toDto(user);
-                    enrichUserWithSubscription(userDto, user.getId());
+
+                    // Ensure hasActiveSubscription is never null (setting default)
+                    if (userDto.getHasActiveSubscription() == null) {
+                        userDto.setHasActiveSubscription(false);
+                    }
+
+                    // Use the subscription from our map if it exists
+                    SubscriptionEntity subscription = activeSubscriptions.get(user.getId());
+                    if (subscription != null) {
+                        SubscriptionResponseDto subscriptionDto = subscriptionMapper.toDto(subscription);
+                        userDto.setActiveSubscription(subscriptionDto);
+                        userDto.setHasActiveSubscription(true);
+                    } else {
+                        // Explicitly set to false if no subscription found
+                        userDto.setActiveSubscription(null);
+                        userDto.setHasActiveSubscription(false);
+                    }
+
                     return userDto;
                 })
                 .collect(Collectors.toList());
@@ -93,9 +133,6 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
         user.getRoles().clear();
         userRepository.deleteById(id);
-
-        // No need to enrich with subscription since user is being deleted
-
         return userMapper.toDto(user);
     }
 

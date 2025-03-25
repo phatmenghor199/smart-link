@@ -20,7 +20,7 @@ public class UserDto {
     private RoleEnum userRole;
     private ShopResponseDto shop;
     private SubscriptionResponseDto activeSubscription; // Add subscription info
-    private Boolean hasActiveSubscription; // Indicates if user has active subscription
+    private Boolean hasActiveSubscription = false; // Default to false
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
