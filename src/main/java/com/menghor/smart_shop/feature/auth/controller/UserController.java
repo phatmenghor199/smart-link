@@ -4,14 +4,14 @@ import com.menghor.smart_shop.constants.SuccessMessages;
 import com.menghor.smart_shop.exceptoins.response.ApiResponse;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordByAdminRequestDto;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordRequestDto;
+import com.menghor.smart_shop.feature.auth.dto.request.UserFilterDto;
+import com.menghor.smart_shop.feature.auth.dto.request.UserUpdateDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserResponseDto;
 import com.menghor.smart_shop.feature.auth.service.UserService;
-import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -19,16 +19,20 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
-    @GetMapping()
-    public ApiResponse<UserResponseDto> getAllUser(
-            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
-            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
-            @RequestParam(value = "search", required = false) String search
+    @PostMapping()
+    public ApiResponse<UserResponseDto> getAllUsersExcludingShopAdmin (@RequestBody UserFilterDto filterDto) {
+        final UserResponseDto users = userService.getAllUsers(filterDto);
+        return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.ALL_USERS_FETCHED_SUCCESSFULLY, users);
+    }
+
+    /**
+     * Get all users, including SHOP_ADMIN
+     */
+    @PostMapping("all")
+    public ApiResponse<UserResponseDto> getAllUsersIncludingShopAdmin(
+            @Valid @RequestBody UserFilterDto filterDto
     ) {
-
-        PaginationUtils.validatePagination(pageNo, pageSize);
-
-        final UserResponseDto allUser = userService.getAllUser(pageNo - 1, pageSize, search);
+        final UserResponseDto allUser = userService.getAllUsersIncludingShopAdmin(filterDto);
         return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.ALL_USERS_FETCHED_SUCCESSFULLY, allUser);
     }
 
@@ -42,6 +46,13 @@ public class UserController {
     public ApiResponse<UserDto> getUserByToken() {
         final UserDto userByToken = userService.getUserByToken();
         return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.USER_FETCHED_SUCCESSFULLY, userByToken);
+    }
+
+
+    @PutMapping("/{id}")
+    public ApiResponse<UserDto> updateUser(@PathVariable Long id, @RequestBody UserUpdateDto updateDto) {
+        final UserDto updatedUser = userService.updateUser(id, updateDto);
+        return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.USER_UPDATED_SUCCESSFULLY, updatedUser);
     }
 
     @DeleteMapping("/{id}")

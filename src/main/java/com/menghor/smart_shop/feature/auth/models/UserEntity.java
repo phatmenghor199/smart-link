@@ -36,7 +36,7 @@ public class UserEntity extends BaseEntity {
     private List<Role> roles = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    private Status status;
+    private Status status = Status.ACTIVE; // Default status is ACTIVE
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private ShopEntity shop;  // This links the user to a shop (one-to-one)

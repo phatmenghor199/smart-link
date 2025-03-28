@@ -106,6 +106,7 @@ public class AuthController {
         user.setUsername(registerDto.getEmail());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         user.setRoles(Collections.singletonList(role));
+        user.setStatus(registerDto.getStatus()); // Set the status from the request
 
         // Save the user
         UserEntity savedUser = userRepository.save(user);

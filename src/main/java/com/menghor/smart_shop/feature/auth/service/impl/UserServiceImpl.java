@@ -1,29 +1,39 @@
 package com.menghor.smart_shop.feature.auth.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
+import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordByAdminRequestDto;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordRequestDto;
+import com.menghor.smart_shop.feature.auth.dto.request.UserFilterDto;
+import com.menghor.smart_shop.feature.auth.dto.request.UserUpdateDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserResponseDto;
 import com.menghor.smart_shop.feature.auth.mapper.UserMapper;
+import com.menghor.smart_shop.feature.auth.models.Role;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
+import com.menghor.smart_shop.feature.auth.repository.RoleRepository;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
+import com.menghor.smart_shop.feature.auth.repository.UserSpecification;
 import com.menghor.smart_shop.feature.auth.service.UserService;
 import com.menghor.smart_shop.feature.setting.mapper.SubscriptionMapper;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,28 +42,87 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
     private final UserMapper userMapper;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionMapper subscriptionMapper;
 
     @Override
-    public UserResponseDto getAllUser(int pageNo, int pageSize, String search) {
+    public UserResponseDto getAllUsers(UserFilterDto filterDto) {
+        // Default method: excludes SHOP_ADMIN
+        return getUsersWithSpecification(filterDto, UserSpecification::createSpecification);
+    }
+
+    @Override
+    public UserResponseDto getAllUsersIncludingShopAdmin(UserFilterDto filterDto) {
+        // Method to get ALL users including SHOP_ADMIN
+        return getUsersWithSpecification(filterDto, UserSpecification::createAllRolesSpecification);
+    }
+
+
+    private UserResponseDto getUsersWithSpecification(
+            UserFilterDto filterDto,
+            SpecificationCreator specificationCreator
+    ) {
+        // Set default values if null
+        if (filterDto.getPageNo() == null) filterDto.setPageNo(1);
+        if (filterDto.getPageSize() == null) filterDto.setPageSize(10);
+
+        // Validate pagination parameters
+        PaginationUtils.validatePagination(filterDto.getPageNo(), filterDto.getPageSize());
+
+        // Adjust page number for 0-based indexing
+        int pageNo = filterDto.getPageNo() - 1;
+        int pageSize = filterDto.getPageSize();
         Pageable pageable = PageRequest.of(pageNo, pageSize);
 
-        Page<UserEntity> userPage;
-        if (search != null && !search.isEmpty()) {
-            log.info("User is get and search by : {}", search);
-            userPage = userRepository.findByUsernameContainingIgnoreCase(search, pageable);
-        } else {
-            userPage = userRepository.findAll(pageable);
-        }
+        // Create specification with filter criteria
+        Specification<UserEntity> spec = specificationCreator.createSpec(
+                filterDto.getSearch(),
+                filterDto.getStatus(),
+                filterDto.getRole()
+        );
+
+        log.info("Fetching users with filters: {}", filterDto);
+
+        // Find users with specification
+        Page<UserEntity> userPage = userRepository.findAll(spec, pageable);
+
+        log.info("Found {} users before subscription filtering", userPage.getContent().size());
 
         // Use the bulk enrichment method in UserMapper
-        List<UserDto> content = userMapper.enrichUsersWithSubscriptions(userPage.getContent());
+        List<UserDto> userDtos = userMapper.enrichUsersWithSubscriptions(userPage.getContent());
+
+        // If subscription filter is applied, filter the list manually
+        if (filterDto.getHasActiveSubscription() != null) {
+            boolean wantActive = filterDto.getHasActiveSubscription();
+            List<UserDto> filteredUsers = userDtos.stream()
+                    .filter(user -> user.getHasActiveSubscription() == wantActive)
+                    .collect(Collectors.toList());
+
+            log.info("After subscription filtering: {} users", filteredUsers.size());
+
+            // Create a new UserResponseDto with the filtered content
+            UserResponseDto response = new UserResponseDto();
+            response.setContent(filteredUsers);
+            response.setPageNo(userPage.getNumber() + 1);
+            response.setPageSize(userPage.getSize());
+            response.setTotalElements(filteredUsers.size());  // This is an approximation
+            response.setTotalPages(Math.max(1, (int) Math.ceil((double) filteredUsers.size() / pageSize)));
+            response.setLast(true);  // This is an approximation
+            return response;
+        }
 
         // Create the UserResponseDto using the mapper
-        return userMapper.toPageDto(content, userPage);
+        return userMapper.toPageDto(userDtos, userPage);
     }
+
+    // Functional interface for specification creation
+    @FunctionalInterface
+    private interface SpecificationCreator {
+        Specification<UserEntity> createSpec(String username, Status status, RoleEnum role);
+    }
+
 
     @Override
     public UserDto getUserById(Long id) {
@@ -70,6 +139,30 @@ public class UserServiceImpl implements UserService {
         List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(currentUser));
         return enrichedUsers.get(0);
     }
+
+    @Override
+    @Transactional
+    public UserDto updateUser(Long id, UserUpdateDto updateDto) {
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
+
+        // Update fields from DTO if provided
+        userMapper.updateUserFromDto(updateDto, user);
+
+        // If role is being updated, fetch the role entity
+        if (updateDto.getRole() != null) {
+            Role role = roleRepository.findByName(updateDto.getRole())
+                    .orElseThrow(() -> new NotFoundException("Role not found: " + updateDto.getRole()));
+            user.getRoles().clear();
+            user.getRoles().add(role);
+        }
+
+        UserEntity updatedUser = userRepository.save(user);
+
+        List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(updatedUser));
+        return enrichedUsers.get(0);
+    }
+
 
     @Transactional
     @Override

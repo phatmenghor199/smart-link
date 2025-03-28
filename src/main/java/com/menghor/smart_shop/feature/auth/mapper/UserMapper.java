@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.mapper;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.feature.auth.dto.request.UserUpdateDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserResponseDto;
 import com.menghor.smart_shop.feature.auth.models.Role;
@@ -38,7 +39,21 @@ public abstract class UserMapper {
     @Mapping(target = "hasActiveSubscription", ignore = true)
     public abstract UserDto toDto(UserEntity user);
 
-    public abstract UserResponseDto toPageDto(List<UserDto> content, Page<UserEntity> userPage);
+    // Implement custom toPageDto method to ensure pagination values are correct
+    public UserResponseDto toPageDto(List<UserDto> content, Page<UserEntity> userPage) {
+        UserResponseDto responseDto = new UserResponseDto();
+        responseDto.setContent(content);
+        // Add 1 to page number to make it 1-based for clients
+        responseDto.setPageNo(userPage.getNumber() + 1);
+        responseDto.setPageSize(userPage.getSize());
+        responseDto.setTotalElements(userPage.getTotalElements());
+        responseDto.setTotalPages(userPage.getTotalPages());
+        responseDto.setLast(userPage.isLast());
+        return responseDto;
+    }
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    public abstract void updateUserFromDto(UserUpdateDto dto, @MappingTarget UserEntity entity);
 
     /**
      * Bulk method to fetch and set active subscriptions for multiple users

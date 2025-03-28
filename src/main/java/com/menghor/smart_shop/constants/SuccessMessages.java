@@ -9,4 +9,6 @@ public class SuccessMessages {
     public static final String PASSWORD_CHANGED_SUCCESSFULLY = "Password changed successfully.";
 
     public static final String ALL_DATA_FETCHED_SUCCESSFULLY = "All data fetched successfully.";
+
+    public static final String USER_UPDATED_SUCCESSFULLY  = "Users updated successfully.";
 }

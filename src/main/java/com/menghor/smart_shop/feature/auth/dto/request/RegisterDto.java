@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.dto.request;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import lombok.Data;
 
 import jakarta.validation.constraints.Email;
@@ -24,4 +25,6 @@ public class RegisterDto {
 
     @NotNull(message = "Role is required")
     private RoleEnum role;
+
+    private Status status = Status.ACTIVE; // Default status is ACTIVE
 }

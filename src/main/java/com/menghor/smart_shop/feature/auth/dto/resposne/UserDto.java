@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.dto.resposne;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ShopResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import lombok.AllArgsConstructor;
@@ -18,9 +19,10 @@ public class UserDto {
     private Long id;
     private String username;
     private RoleEnum userRole;
+    private Status status;
     private ShopResponseDto shop;
-    private SubscriptionResponseDto activeSubscription; // Add subscription info
-    private Boolean hasActiveSubscription = false; // Default to false
+    private SubscriptionResponseDto activeSubscription;
+    private Boolean hasActiveSubscription = false;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
