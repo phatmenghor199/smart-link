@@ -31,7 +31,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>, JpaSpec
     @Query("SELECT u FROM UserEntity u LEFT JOIN FETCH u.shop LEFT JOIN FETCH u.roles WHERE u.username = :username")
     Optional<UserEntity> findWithRolesAndShopByUsername(@Param("username") String username);
 
-//    Optional<UserEntity> findByUsername(String username);
+//    Optional<UserEntity> findByUsername(String userna me);
 //
 //    @EntityGraph(attributePaths = {"roles", "shop"})
 //    Optional<UserEntity> findWithRolesAndShopByUsername(String username);
