@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.mapper;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.feature.auth.dto.request.UserUpdateDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.UserResponseDto;
@@ -35,6 +36,7 @@ public abstract class UserMapper {
 
     @Mapping(source = "roles", target = "userRole")
     @Mapping(source = "shop", target = "shop")
+    @Mapping(source = "status", target = "status")
     @Mapping(target = "activeSubscription", ignore = true)
     @Mapping(target = "hasActiveSubscription", ignore = true)
     public abstract UserDto toDto(UserEntity user);
@@ -81,6 +83,11 @@ public abstract class UserMapper {
         return users.stream()
                 .map(user -> {
                     UserDto userDto = toDto(user);
+
+                    // Ensure status is never null by providing a default
+                    if (userDto.getStatus() == null) {
+                        userDto.setStatus(Status.INACTIVE); // Provide a default status if missing
+                    }
 
                     // Use the active subscription from our map if it exists
                     SubscriptionEntity subscription = subscriptionMap.get(user.getId());

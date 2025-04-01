@@ -9,22 +9,20 @@ import java.util.List;
 
 public interface SubscriptionService {
     SubscriptionResponseDto createSubscription(SubscriptionRequestDto subscriptionRequestDto);
-    
+
     SubscriptionResponseDto getSubscriptionById(Long subscriptionId);
-    
+
     SubscriptionResponseDto getActiveSubscriptionForUser(Long userId);
-    
+
     List<SubscriptionResponseDto> getSubscriptionsByUserId(Long userId);
-    
+
     List<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(Long userId);
-    
+
     SubscriptionResponseDto renewSubscription(SubscriptionRenewalDto renewalDto);
-    
-    SubscriptionResponseDto cancelSubscription(Long subscriptionId, String reason);
-    
-    boolean hasActiveSubscription(Long userId);
-    
+
     void processExpiredSubscriptions();
-    
+
+    SubscriptionResponseDto cancelSubscription(Long subscriptionId, String reason);
+
     SubscriptionResponseDto changeSubscriptionPlan(Long subscriptionId, Long newPlanId, String transactionId, Double amountPaid);
 }

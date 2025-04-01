@@ -20,7 +20,8 @@ public class SubscriptionSecurityConfig implements WebMvcConfigurer {
                         "/api/v1/plans/**",
                         "/api/v1/subscriptions/**",
                         "/v3/api-docs/**",
-                        "/swagger-ui/**"
+                        "/swagger-ui/**",
+                        "/api/v1/images/**"
                 );
     }
 }

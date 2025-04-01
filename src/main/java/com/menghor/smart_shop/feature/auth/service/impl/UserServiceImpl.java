@@ -90,6 +90,14 @@ public class UserServiceImpl implements UserService {
 
         log.info("Found {} users before subscription filtering", userPage.getContent().size());
 
+        // Ensure all users have a status value
+        userPage.getContent().forEach(user -> {
+            if (user.getStatus() == null) {
+                user.setStatus(Status.ACTIVE); // Default to ACTIVE
+                userRepository.save(user);
+            }
+        });
+
         // Use the bulk enrichment method in UserMapper
         List<UserDto> userDtos = userMapper.enrichUsersWithSubscriptions(userPage.getContent());
 
@@ -129,6 +137,12 @@ public class UserServiceImpl implements UserService {
         UserEntity user = userRepository.findUserWithShopById(id)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.USER_NOT_FOUND, id)));
 
+        // Ensure status is set
+        if (user.getStatus() == null) {
+            user.setStatus(Status.ACTIVE);
+            userRepository.save(user);
+        }
+
         List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(user));
         return enrichedUsers.get(0);
     }
@@ -136,6 +150,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto getUserByToken() {
         UserEntity currentUser = securityUtils.getCurrentUser();
+
+        // Ensure status is set
+        if (currentUser.getStatus() == null) {
+            currentUser.setStatus(Status.ACTIVE);
+            userRepository.save(currentUser);
+        }
+
         List<UserDto> enrichedUsers = userMapper.enrichUsersWithSubscriptions(List.of(currentUser));
         return enrichedUsers.get(0);
     }
@@ -155,6 +176,11 @@ public class UserServiceImpl implements UserService {
                     .orElseThrow(() -> new NotFoundException("Role not found: " + updateDto.getRole()));
             user.getRoles().clear();
             user.getRoles().add(role);
+        }
+
+        // Ensure status is set
+        if (user.getStatus() == null) {
+            user.setStatus(updateDto.getStatus() != null ? updateDto.getStatus() : Status.ACTIVE);
         }
 
         UserEntity updatedUser = userRepository.save(user);
@@ -187,6 +213,12 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
+
+        // Ensure status is set
+        if (user.getStatus() == null) {
+            user.setStatus(Status.ACTIVE);
+        }
+
         UserEntity userEntity = userRepository.save(user);
 
         return userMapper.toDto(userEntity);
@@ -206,6 +238,12 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
+
+        // Ensure status is set
+        if (user.getStatus() == null) {
+            user.setStatus(Status.ACTIVE);
+        }
+
         UserEntity userEntity = userRepository.save(user);
 
         return userMapper.toDto(userEntity);

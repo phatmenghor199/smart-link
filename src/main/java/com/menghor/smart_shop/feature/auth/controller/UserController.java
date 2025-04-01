@@ -21,7 +21,7 @@ public class UserController {
 
     @PostMapping()
     public ApiResponse<UserResponseDto> getAllUsersExcludingShopAdmin (@RequestBody UserFilterDto filterDto) {
-        final UserResponseDto users = userService.getAllUsers(filterDto);
+        UserResponseDto users = userService.getAllUsers(filterDto);
         return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.ALL_USERS_FETCHED_SUCCESSFULLY, users);
     }
 
@@ -32,7 +32,7 @@ public class UserController {
     public ApiResponse<UserResponseDto> getAllUsersIncludingShopAdmin(
             @Valid @RequestBody UserFilterDto filterDto
     ) {
-        final UserResponseDto allUser = userService.getAllUsersIncludingShopAdmin(filterDto);
+        UserResponseDto allUser = userService.getAllUsersIncludingShopAdmin(filterDto);
         return new ApiResponse<>(SuccessMessages.SUCCESS, SuccessMessages.ALL_USERS_FETCHED_SUCCESSFULLY, allUser);
     }
 

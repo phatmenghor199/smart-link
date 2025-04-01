@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class SubscriptionScheduler {
 
     private final SubscriptionService subscriptionService;
-    
+
     // Run once a day at midnight to process expired subscriptions
     @Scheduled(cron = "0 0 0 * * ?")
     public void processExpiredSubscriptions() {
@@ -29,4 +29,6 @@ public class SubscriptionScheduler {
         // Implementation would integrate with notification service
         log.info("Completed scheduled task: Sending subscription expiration notifications");
     }
+
+
 }

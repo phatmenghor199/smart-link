@@ -84,18 +84,5 @@ public class SubscriptionController {
                 subscriptionService.changeSubscriptionPlan(subscriptionId, newPlanId, transactionId, amountPaid);
         return new ApiResponse<>("Success", "Subscription plan changed successfully", subscriptionResponseDto);
     }
-    
-    @GetMapping("/check/{userId}")
-    public ApiResponse<Boolean> hasActiveSubscription(@PathVariable Long userId) {
-        log.info("Received request to check if user ID: {} has an active subscription", userId);
-        final boolean hasActiveSubscription = subscriptionService.hasActiveSubscription(userId);
-        return new ApiResponse<>("Success", "Subscription check successful", hasActiveSubscription);
-    }
-    
-    @PostMapping("/process-expired")
-    public ApiResponse<String> processExpiredSubscriptions() {
-        log.info("Received request to process expired subscriptions");
-        subscriptionService.processExpiredSubscriptions();
-        return new ApiResponse<>("Success", "Expired subscriptions processed successfully", "Processed");
-    }
+
 }

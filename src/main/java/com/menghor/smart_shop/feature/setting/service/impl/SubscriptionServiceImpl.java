@@ -207,15 +207,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionMapper.toDto(savedSubscription);
     }
 
-    @Override
-    public boolean hasActiveSubscription(Long userId) {
-        log.info("Checking if user ID: {} has an active subscription", userId);
-
-        return subscriptionRepository.hasActiveSubscription(userId, LocalDateTime.now());
-    }
-
-    @Override
-    @Scheduled(cron = "0 0 0 * * ?") // Run at midnight every day
     @Transactional
     public void processExpiredSubscriptions() {
         log.info("Processing expired subscriptions");

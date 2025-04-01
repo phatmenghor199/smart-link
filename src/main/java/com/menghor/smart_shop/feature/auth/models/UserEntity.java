@@ -36,6 +36,7 @@ public class UserEntity extends BaseEntity {
     private List<Role> roles = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Status status = Status.ACTIVE; // Default status is ACTIVE
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)

@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.auth.controller;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
+import com.menghor.smart_shop.enumations.Status;
 import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.DuplicateNameException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
@@ -106,8 +107,8 @@ public class AuthController {
         user.setUsername(registerDto.getEmail());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         user.setRoles(Collections.singletonList(role));
-        user.setStatus(registerDto.getStatus()); // Set the status from the request
-
+        // Always set a status value
+        user.setStatus(registerDto.getStatus() != null ? registerDto.getStatus() : Status.INACTIVE);
         // Save the user
         UserEntity savedUser = userRepository.save(user);
 
