@@ -6,8 +6,10 @@ import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.SubscriptionHistoryMapper;
@@ -19,13 +21,14 @@ import com.menghor.smart_shop.feature.setting.repository.PlanRepository;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionHistoryRepository;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;
 import com.menghor.smart_shop.feature.setting.service.SubscriptionService;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -107,52 +110,63 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public List<SubscriptionResponseDto> getSubscriptionsByUserId(Long userId) {
-        log.info("Getting all subscriptions for user ID: {}", userId);
+    public CustomPaginationResponseDto<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(
 
-        List<SubscriptionEntity> subscriptions = subscriptionRepository.findByUserId(userId);
+            SubscriptionHistoryFilterDto filterDto
+    ) {
+        log.info("Getting subscription history for user ID: {} with filter: {}", filterDto.getUserId(), filterDto);
 
-        return subscriptions.stream()
-                .map(subscriptionMapper::toDto)
+        // Validate user exists
+        userRepository.findById(filterDto.getUserId())
+                .orElseThrow(() -> new NotFoundException("User not found with ID: " + filterDto.getUserId()));
+
+        // Fetch subscription history
+        List<SubscriptionHistoryEntity> allHistory = historyRepository.findByUserId(filterDto.getUserId());
+
+        // Apply status filter if provided
+        List<SubscriptionHistoryEntity> filteredHistory = allHistory.stream()
+                .filter(history -> filterDto.getStatus() == null || history.getStatus() == filterDto.getStatus())
+                .filter(history -> filterDto.getActionType() == null || history.getActionType() == filterDto.getActionType())
+                .sorted(Comparator.comparing(SubscriptionHistoryEntity::getCreatedAt).reversed())
                 .collect(Collectors.toList());
-    }
 
-    @Override
-    public List<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(Long userId) {
-        log.info("Getting subscription history for user ID: {}", userId);
+        // Apply pagination
+        int start = (filterDto.getPageNo() - 1) * filterDto.getPageSize();
+        int end = Math.min(start + filterDto.getPageSize(), filteredHistory.size());
+        List<SubscriptionHistoryEntity> pagedHistory = filteredHistory.subList(start, end);
 
-        List<SubscriptionHistoryEntity> history = historyRepository.findByUserId(userId);
-
-        return history.stream()
+        // Convert to DTOs
+        List<SubscriptionHistoryResponseDto> historyDtos = pagedHistory.stream()
                 .map(historyMapper::toDto)
                 .collect(Collectors.toList());
+
+        // Create pagination response
+        CustomPaginationResponseDto<SubscriptionHistoryResponseDto> response = new CustomPaginationResponseDto<>();
+        response.setContent(historyDtos);
+        response.setPageNo(filterDto.getPageNo());
+        response.setPageSize(filterDto.getPageSize());
+        response.setTotalElements(filteredHistory.size());
+        response.setTotalPages((int) Math.ceil((double) filteredHistory.size() / filterDto.getPageSize()));
+        response.setLast(filterDto.getPageNo() >= response.getTotalPages());
+
+        return response;
     }
 
     @Override
     @Transactional
     public SubscriptionResponseDto renewSubscription(SubscriptionRenewalDto renewalDto) {
-        log.info("Renewing subscription with ID: {}", renewalDto.getSubscriptionId());
+        log.info("Renewing subscription for user ID: {}", renewalDto.getUserId());
 
-        SubscriptionEntity subscription = subscriptionRepository.findById(renewalDto.getSubscriptionId())
-                .orElseThrow(() -> new NotFoundException("Subscription not found with ID: " + renewalDto.getSubscriptionId()));
+        // Find the user's active subscription
+        SubscriptionEntity subscription = subscriptionRepository.findActiveSubscriptionForUser(renewalDto.getUserId(), LocalDateTime.now())
+                .orElseThrow(() -> new NotFoundException("No active subscription found for user ID: " + renewalDto.getUserId()));
 
+        // Check subscription status
         if (subscription.getStatus() != Status.ACTIVE && subscription.getStatus() != Status.EXPIRED) {
             throw new BadRequestException("Cannot renew a subscription that is not active or expired.");
         }
 
         PlanEntity plan = subscription.getPlan();
-
-        // Create a new subscription as a renewal
-        SubscriptionEntity renewedSubscription = new SubscriptionEntity();
-        renewedSubscription.setUser(subscription.getUser());
-        renewedSubscription.setPlan(plan);
-        renewedSubscription.setStartDate(LocalDateTime.now());
-        renewedSubscription.setEndDate(LocalDateTime.now().plusDays(plan.getDurationDays()));
-        renewedSubscription.setStatus(Status.ACTIVE);
-        renewedSubscription.setAutoRenew(subscription.getAutoRenew());
-        renewedSubscription.setTransactionId(renewalDto.getTransactionId());
-        renewedSubscription.setAmountPaid(renewalDto.getAmountPaid());
-        renewedSubscription.setPreviousSubscriptionId(subscription.getId());
 
         // If previous subscription is still active, extend the current one instead of creating a new one
         if (subscription.getStatus() == Status.ACTIVE && subscription.getEndDate().isAfter(LocalDateTime.now())) {
@@ -170,6 +184,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return subscriptionMapper.toDto(savedSubscription);
         }
 
+        // Create a new subscription as a renewal
+        SubscriptionEntity renewedSubscription = new SubscriptionEntity();
+        renewedSubscription.setUser(subscription.getUser());
+        renewedSubscription.setPlan(plan);
+        renewedSubscription.setStartDate(LocalDateTime.now());
+        renewedSubscription.setEndDate(LocalDateTime.now().plusDays(plan.getDurationDays()));
+        renewedSubscription.setStatus(Status.ACTIVE);
+        renewedSubscription.setAutoRenew(subscription.getAutoRenew());
+        renewedSubscription.setTransactionId(renewalDto.getTransactionId());
+        renewedSubscription.setAmountPaid(renewalDto.getAmountPaid());
+        renewedSubscription.setPreviousSubscriptionId(subscription.getId());
+
         SubscriptionEntity savedSubscription = subscriptionRepository.save(renewedSubscription);
 
         // Update the status of the old subscription
@@ -186,11 +212,65 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionResponseDto cancelSubscription(Long subscriptionId, String reason) {
-        log.info("Canceling subscription with ID: {}", subscriptionId);
+    public SubscriptionResponseDto changeSubscriptionPlan(SubscriptionPlanChangeDto planChangeDto) {
+        log.info("Changing plan for user ID: {} to plan ID: {}", planChangeDto.getUserId(), planChangeDto.getNewPlanId());
 
-        SubscriptionEntity subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new NotFoundException("Subscription not found with ID: " + subscriptionId));
+        // Find the user's active subscription
+        SubscriptionEntity subscription = subscriptionRepository.findActiveSubscriptionForUser(planChangeDto.getUserId(), LocalDateTime.now())
+                .orElseThrow(() -> new NotFoundException("No active subscription found for user ID: " + planChangeDto.getUserId()));
+
+        if (subscription.getStatus() != Status.ACTIVE) {
+            throw new BadRequestException("Cannot change plan for a subscription that is not active.");
+        }
+
+        PlanEntity newPlan = planRepository.findById(planChangeDto.getNewPlanId())
+                .orElseThrow(() -> new NotFoundException("Plan not found with ID: " + planChangeDto.getNewPlanId()));
+
+        if (newPlan.getStatus() != Status.ACTIVE) {
+            throw new BadRequestException("Cannot change to an inactive plan.");
+        }
+
+        // Determine action type based on plan price
+        SubscriptionActionType actionType = newPlan.getPrice() > subscription.getPlan().getPrice()
+                ? SubscriptionActionType.UPGRADED
+                : SubscriptionActionType.DOWNGRADED;
+
+        // Create a new subscription with the new plan
+        SubscriptionEntity newSubscription = new SubscriptionEntity();
+        newSubscription.setUser(subscription.getUser());
+        newSubscription.setPlan(newPlan);
+        newSubscription.setStartDate(LocalDateTime.now());
+        newSubscription.setEndDate(LocalDateTime.now().plusDays(newPlan.getDurationDays()));
+        newSubscription.setStatus(Status.ACTIVE);
+        newSubscription.setAutoRenew(subscription.getAutoRenew());
+        newSubscription.setTransactionId(planChangeDto.getTransactionId());
+        newSubscription.setAmountPaid(planChangeDto.getAmountPaid());
+        newSubscription.setPreviousSubscriptionId(subscription.getId());
+
+        SubscriptionEntity savedSubscription = subscriptionRepository.save(newSubscription);
+
+        // Update the status of the old subscription
+        subscription.setStatus(Status.INACTIVE);
+        subscriptionRepository.save(subscription);
+
+        // Create subscription history
+        createSubscriptionHistory(savedSubscription, actionType,
+                planChangeDto.getNotes() != null ? planChangeDto.getNotes() :
+                        "Changed from " + subscription.getPlan().getName() + " to " + newPlan.getName());
+
+        log.info("Plan changed successfully for user. New subscription ID: {}", savedSubscription.getId());
+
+        return subscriptionMapper.toDto(savedSubscription);
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionResponseDto cancelSubscription(Long userId, String reason) {
+        log.info("Canceling subscription for user ID: {}", userId);
+
+        // Find the user's active subscription
+        SubscriptionEntity subscription = subscriptionRepository.findActiveSubscriptionForUser(userId, LocalDateTime.now())
+                .orElseThrow(() -> new NotFoundException("No active subscription found for user ID: " + userId));
 
         if (subscription.getStatus() != Status.ACTIVE) {
             throw new BadRequestException("Cannot cancel a subscription that is not active.");
@@ -207,6 +287,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionMapper.toDto(savedSubscription);
     }
 
+    @Override
     @Transactional
     public void processExpiredSubscriptions() {
         log.info("Processing expired subscriptions");
@@ -227,14 +308,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 log.info("Auto-renewing subscription with ID: {}", subscription.getId());
 
                 try {
-                    // Auto-renewal logic should be implemented based on payment integration
-                    // This is a placeholder for the actual implementation
+                    // Prepare auto-renewal DTO
                     SubscriptionRenewalDto renewalDto = new SubscriptionRenewalDto();
-                    renewalDto.setSubscriptionId(subscription.getId());
+                    renewalDto.setUserId(subscription.getUser().getId());
                     renewalDto.setTransactionId("AUTO-RENEWAL-" + System.currentTimeMillis());
                     renewalDto.setAmountPaid(subscription.getPlan().getPrice());
                     renewalDto.setNotes("Auto-renewal");
 
+                    // Renew subscription
                     renewSubscription(renewalDto);
                 } catch (Exception e) {
                     log.error("Failed to auto-renew subscription with ID: {}", subscription.getId(), e);
@@ -245,57 +326,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         log.info("Processed {} expired subscriptions", expiredSubscriptions.size());
     }
 
-    @Override
-    @Transactional
-    public SubscriptionResponseDto changeSubscriptionPlan(Long subscriptionId, Long newPlanId, String transactionId, Double amountPaid) {
-        log.info("Changing plan for subscription ID: {} to plan ID: {}", subscriptionId, newPlanId);
-
-        SubscriptionEntity subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new NotFoundException("Subscription not found with ID: " + subscriptionId));
-
-        if (subscription.getStatus() != Status.ACTIVE) {
-            throw new BadRequestException("Cannot change plan for a subscription that is not active.");
-        }
-
-        PlanEntity newPlan = planRepository.findById(newPlanId)
-                .orElseThrow(() -> new NotFoundException("Plan not found with ID: " + newPlanId));
-
-        if (newPlan.getStatus() != Status.ACTIVE) {
-            throw new BadRequestException("Cannot change to an inactive plan.");
-        }
-
-        // Determine action type based on plan price
-        SubscriptionActionType actionType = newPlan.getPrice() > subscription.getPlan().getPrice()
-                ? SubscriptionActionType.UPGRADED
-                : SubscriptionActionType.DOWNGRADED;
-
-        // Create a new subscription with the new plan
-        SubscriptionEntity newSubscription = new SubscriptionEntity();
-        newSubscription.setUser(subscription.getUser());
-        newSubscription.setPlan(newPlan);
-        newSubscription.setStartDate(LocalDateTime.now());
-        newSubscription.setEndDate(LocalDateTime.now().plusDays(newPlan.getDurationDays()));
-        newSubscription.setStatus(Status.ACTIVE);
-        newSubscription.setAutoRenew(subscription.getAutoRenew());
-        newSubscription.setTransactionId(transactionId);
-        newSubscription.setAmountPaid(amountPaid);
-        newSubscription.setPreviousSubscriptionId(subscription.getId());
-
-        SubscriptionEntity savedSubscription = subscriptionRepository.save(newSubscription);
-
-        // Update the status of the old subscription
-        subscription.setStatus(Status.INACTIVE);
-        subscriptionRepository.save(subscription);
-
-        // Create subscription history
-        createSubscriptionHistory(savedSubscription, actionType,
-                "Changed from " + subscription.getPlan().getName() + " to " + newPlan.getName());
-
-        log.info("Plan changed successfully for subscription. New subscription ID: {}", savedSubscription.getId());
-
-        return subscriptionMapper.toDto(savedSubscription);
-    }
-
+    /**
+     * Helper method to create subscription history record
+     */
     private void createSubscriptionHistory(SubscriptionEntity subscription, SubscriptionActionType actionType, String notes) {
         SubscriptionHistoryEntity history = new SubscriptionHistoryEntity();
         history.setUser(subscription.getUser());

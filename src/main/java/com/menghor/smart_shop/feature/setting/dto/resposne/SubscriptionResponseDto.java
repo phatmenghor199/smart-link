@@ -16,7 +16,6 @@ public class SubscriptionResponseDto {
     private Boolean autoRenew;
     private String transactionId;
     private Double amountPaid;
-    private Long previousSubscriptionId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean isActive;

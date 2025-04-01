@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class SubscriptionHistoryFilterDto {
+    private Long userId;
     private Status status;
     private SubscriptionActionType actionType;
     private Integer pageNo = 1;

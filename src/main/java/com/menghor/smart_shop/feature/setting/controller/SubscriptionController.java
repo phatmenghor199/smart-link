@@ -1,11 +1,15 @@
 package com.menghor.smart_shop.feature.setting.controller;
 
 import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.feature.setting.service.SubscriptionService;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
+import com.menghor.smart_shop.utils.database.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,71 +22,83 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class SubscriptionController {
-    
+
     private final SubscriptionService subscriptionService;
-    
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<SubscriptionResponseDto> createSubscription(@RequestBody SubscriptionRequestDto subscriptionRequestDto) {
+    public ApiResponse<SubscriptionResponseDto> createSubscription(
+            @RequestBody SubscriptionRequestDto subscriptionRequestDto
+    ) {
         log.info("Received request to create a new subscription");
-        final SubscriptionResponseDto subscriptionResponseDto = subscriptionService.createSubscription(subscriptionRequestDto);
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.createSubscription(subscriptionRequestDto);
         return new ApiResponse<>("Success", "Subscription created successfully", subscriptionResponseDto);
     }
-    
+
     @GetMapping("/{subscriptionId}")
-    public ApiResponse<SubscriptionResponseDto> getSubscriptionById(@PathVariable Long subscriptionId) {
+    public ApiResponse<SubscriptionResponseDto> getSubscriptionById(
+            @PathVariable Long subscriptionId
+    ) {
         log.info("Received request to get subscription by ID: {}", subscriptionId);
-        final SubscriptionResponseDto subscriptionResponseDto = subscriptionService.getSubscriptionById(subscriptionId);
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.getSubscriptionById(subscriptionId);
         return new ApiResponse<>("Success", "Subscription retrieved successfully", subscriptionResponseDto);
     }
-    
-    @GetMapping("/user/{userId}")
-    public ApiResponse<List<SubscriptionResponseDto>> getSubscriptionsByUserId(@PathVariable Long userId) {
-        log.info("Received request to get subscriptions by user ID: {}", userId);
-        final List<SubscriptionResponseDto> subscriptions = subscriptionService.getSubscriptionsByUserId(userId);
-        return new ApiResponse<>("Success", "Subscriptions retrieved successfully", subscriptions);
-    }
-    
+
     @GetMapping("/user/{userId}/active")
-    public ApiResponse<SubscriptionResponseDto> getActiveSubscriptionForUser(@PathVariable Long userId) {
-        log.info("Received request to get active subscription for user ID: {}", userId);
-        final SubscriptionResponseDto subscriptionResponseDto = subscriptionService.getActiveSubscriptionForUser(userId);
+    public ApiResponse<SubscriptionResponseDto> getActiveSubscriptionForCurrentUser(@PathVariable Long userId) {
+        log.info("Received request to get active subscription for current user");
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.getActiveSubscriptionForUser(userId);
         return new ApiResponse<>("Success", "Active subscription retrieved successfully", subscriptionResponseDto);
     }
-    
-    @GetMapping("/user/{userId}/history")
-    public ApiResponse<List<SubscriptionHistoryResponseDto>> getSubscriptionHistoryByUserId(@PathVariable Long userId) {
-        log.info("Received request to get subscription history for user ID: {}", userId);
-        final List<SubscriptionHistoryResponseDto> history = subscriptionService.getSubscriptionHistoryByUserId(userId);
+
+    @PostMapping("/user/history")
+    public ApiResponse<CustomPaginationResponseDto<SubscriptionHistoryResponseDto>> getSubscriptionHistory(
+            @RequestBody(required = false) SubscriptionHistoryFilterDto filterDto
+    ) {
+        log.info("Received request to get subscription history for current user");
+
+        // Use default filter if none provided
+        if (filterDto == null) {
+            filterDto = new SubscriptionHistoryFilterDto();
+        }
+
+        final CustomPaginationResponseDto<SubscriptionHistoryResponseDto> history =
+                subscriptionService.getSubscriptionHistoryByUserId(filterDto);
         return new ApiResponse<>("Success", "Subscription history retrieved successfully", history);
     }
-    
+
     @PostMapping("/renew")
-    public ApiResponse<SubscriptionResponseDto> renewSubscription(@RequestBody SubscriptionRenewalDto renewalDto) {
-        log.info("Received request to renew subscription with ID: {}", renewalDto.getSubscriptionId());
-        final SubscriptionResponseDto subscriptionResponseDto = subscriptionService.renewSubscription(renewalDto);
+    public ApiResponse<SubscriptionResponseDto> renewSubscription(
+            @RequestBody SubscriptionRenewalDto renewalDto
+    ) {
+        log.info("Received request to renew subscription");
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.renewSubscription(renewalDto);
         return new ApiResponse<>("Success", "Subscription renewed successfully", subscriptionResponseDto);
     }
-    
-    @PostMapping("/{subscriptionId}/cancel")
+
+    @PostMapping("/cancel")
     public ApiResponse<SubscriptionResponseDto> cancelSubscription(
-            @PathVariable Long subscriptionId, 
-            @RequestParam(required = false) String reason) {
-        log.info("Received request to cancel subscription with ID: {}", subscriptionId);
-        final SubscriptionResponseDto subscriptionResponseDto = subscriptionService.cancelSubscription(subscriptionId, reason);
+            @RequestParam Long userId,
+            @RequestParam(required = false) String reason
+    ) {
+        log.info("Received request to cancel subscription");
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.cancelSubscription(userId, reason);
         return new ApiResponse<>("Success", "Subscription canceled successfully", subscriptionResponseDto);
     }
-    
-    @PostMapping("/{subscriptionId}/change-plan")
+
+    @PostMapping("/change-plan")
     public ApiResponse<SubscriptionResponseDto> changeSubscriptionPlan(
-            @PathVariable Long subscriptionId,
-            @RequestParam Long newPlanId,
-            @RequestParam String transactionId,
-            @RequestParam Double amountPaid) {
-        log.info("Received request to change plan for subscription ID: {} to plan ID: {}", subscriptionId, newPlanId);
-        final SubscriptionResponseDto subscriptionResponseDto = 
-                subscriptionService.changeSubscriptionPlan(subscriptionId, newPlanId, transactionId, amountPaid);
+            @RequestBody SubscriptionPlanChangeDto planChangeDto
+    ) {
+
+        log.info("Received request to change subscription plan");
+        final SubscriptionResponseDto subscriptionResponseDto =
+                subscriptionService.changeSubscriptionPlan(planChangeDto);
         return new ApiResponse<>("Success", "Subscription plan changed successfully", subscriptionResponseDto);
     }
-
 }

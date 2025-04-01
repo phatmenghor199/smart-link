@@ -1,9 +1,12 @@
 package com.menghor.smart_shop.feature.setting.service;
 
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
+import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
 import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 
 import java.util.List;
 
@@ -14,15 +17,15 @@ public interface SubscriptionService {
 
     SubscriptionResponseDto getActiveSubscriptionForUser(Long userId);
 
-    List<SubscriptionResponseDto> getSubscriptionsByUserId(Long userId);
-
-    List<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(Long userId);
+    CustomPaginationResponseDto<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(
+            SubscriptionHistoryFilterDto filterDto
+    );
 
     SubscriptionResponseDto renewSubscription(SubscriptionRenewalDto renewalDto);
 
     void processExpiredSubscriptions();
 
-    SubscriptionResponseDto cancelSubscription(Long subscriptionId, String reason);
+    SubscriptionResponseDto cancelSubscription(Long userId, String reason);
 
-    SubscriptionResponseDto changeSubscriptionPlan(Long subscriptionId, Long newPlanId, String transactionId, Double amountPaid);
+    SubscriptionResponseDto changeSubscriptionPlan(SubscriptionPlanChangeDto planChangeDto);
 }
