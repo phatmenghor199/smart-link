@@ -28,6 +28,16 @@ spring:
   # main:
   #   allow-circular-references: true
 
+# Logging configuration
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    root: INFO
+    com.menghor.smart_shop: INFO
+    org.springframework: INFO
+    org.hibernate: WARN
+
+
 server:
   port: 8080
 

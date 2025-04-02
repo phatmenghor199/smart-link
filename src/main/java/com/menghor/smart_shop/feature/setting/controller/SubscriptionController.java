@@ -1,10 +1,7 @@
 package com.menghor.smart_shop.feature.setting.controller;
 
 import com.menghor.smart_shop.exceptoins.response.ApiResponse;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
+import com.menghor.smart_shop.feature.setting.dto.request.*;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.feature.setting.service.SubscriptionService;
@@ -44,6 +41,16 @@ public class SubscriptionController {
         final SubscriptionResponseDto subscriptionResponseDto =
                 subscriptionService.getSubscriptionById(subscriptionId);
         return new ApiResponse<>("Success", "Subscription retrieved successfully", subscriptionResponseDto);
+    }
+
+    @PutMapping("/update")
+    public ApiResponse<SubscriptionResponseDto> updateSubscription(
+            @RequestBody SubscriptionUpdateDto updateDto
+    ) {
+        log.info("Received request to update subscription for user ID: {}", updateDto.getUserId());
+
+        final SubscriptionResponseDto updatedSubscription = subscriptionService.updateSubscription(updateDto);
+        return new ApiResponse<>("Success", "Subscription updated successfully", updatedSubscription);
     }
 
     @GetMapping("/user/{userId}/active")

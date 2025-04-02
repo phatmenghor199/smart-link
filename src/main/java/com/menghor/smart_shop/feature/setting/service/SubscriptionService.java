@@ -1,9 +1,6 @@
 package com.menghor.smart_shop.feature.setting.service;
 
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
+import com.menghor.smart_shop.feature.setting.dto.request.*;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
@@ -20,6 +17,8 @@ public interface SubscriptionService {
     CustomPaginationResponseDto<SubscriptionHistoryResponseDto> getSubscriptionHistoryByUserId(
             SubscriptionHistoryFilterDto filterDto
     );
+
+    SubscriptionResponseDto updateSubscription(SubscriptionUpdateDto updateDto);
 
     SubscriptionResponseDto renewSubscription(SubscriptionRenewalDto renewalDto);
 

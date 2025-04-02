@@ -6,10 +6,7 @@ import com.menghor.smart_shop.exceptoins.error.BadRequestException;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionHistoryFilterDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRenewalDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionRequestDto;
-import com.menghor.smart_shop.feature.setting.dto.request.SubscriptionPlanChangeDto;
+import com.menghor.smart_shop.feature.setting.dto.request.*;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionHistoryResponseDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.SubscriptionResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.SubscriptionHistoryMapper;
@@ -150,6 +147,40 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         response.setLast(filterDto.getPageNo() >= response.getTotalPages());
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionResponseDto updateSubscription(SubscriptionUpdateDto updateDto) {
+        log.info("Updating active subscription for user ID: {}", updateDto.getUserId());
+
+        // Verify user exists
+        UserEntity user = userRepository.findById(updateDto.getUserId())
+                .orElseThrow(() -> new NotFoundException("User not found with ID: " + updateDto.getUserId()));
+
+        // Find the active subscription for the user
+        SubscriptionEntity subscription = subscriptionRepository.findActiveSubscriptionForUser(
+                        updateDto.getUserId(), LocalDateTime.now())
+                .orElseThrow(() -> new NotFoundException("No active subscription found for user ID: " + updateDto.getUserId()));
+
+        // Update only the fields that are provided
+        if (updateDto.getTransactionId() != null) {
+            subscription.setTransactionId(updateDto.getTransactionId());
+        }
+
+        if (updateDto.getAutoRenew() != null) {
+            subscription.setAutoRenew(updateDto.getAutoRenew());
+        }
+
+        if (updateDto.getAmountPaid() != null) {
+            subscription.setAmountPaid(updateDto.getAmountPaid());
+        }
+
+        SubscriptionEntity savedSubscription = subscriptionRepository.save(subscription);
+
+        log.info("Subscription updated successfully with ID: {}", savedSubscription.getId());
+
+        return subscriptionMapper.toDto(savedSubscription);
     }
 
     @Override
