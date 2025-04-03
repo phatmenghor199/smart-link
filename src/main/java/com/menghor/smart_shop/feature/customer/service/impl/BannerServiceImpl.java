@@ -10,12 +10,17 @@ import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.feature.customer.repository.BannerRepository;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.BannerService;
+import com.menghor.smart_shop.feature.setting.service.ImageService;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,7 +31,7 @@ public class BannerServiceImpl implements BannerService {
     private final ShopRepository shopRepository;
     private final SecurityUtils securityUtils;
     private final BannerMapper bannerMapper;
-
+    private final ImageService imageService;
 
     @Override
     public BannerResponseDto createBanner(BannerRequestDto createRequest) {
@@ -37,12 +42,7 @@ public class BannerServiceImpl implements BannerService {
         log.info("Creating banner for shopId: {} by userId: {}", shopId, userId);
 
         ShopEntity shop = getUserOwnedShop(userId, shopId);
-
-
-        // Map the DTO to BannerEntity
         BannerEntity bannerEntity = bannerMapper.toEntity(createRequest);
-
-        // Set the shop for the banner
         bannerEntity.setShop(shop);
 
         BannerEntity savedBanner = bannerRepository.save(bannerEntity);
@@ -57,16 +57,16 @@ public class BannerServiceImpl implements BannerService {
         Long shopId = securityUtils.getShopIdFromToken();
 
         log.info("Fetching banners for shopId: {} by userId: {}", shopId, userId);
+
         getUserOwnedShop(userId, shopId);
-
         List<BannerEntity> banners = bannerRepository.findByShopId(shopId);
-
         return banners.stream()
                 .map(bannerMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional
     public BannerResponseDto updateBanner(Long bannerId, BannerRequestDto updateRequest) {
         Long userId = securityUtils.getUserIdFromToken();
 
@@ -81,11 +81,17 @@ public class BannerServiceImpl implements BannerService {
 
         BannerEntity updatedBanner = bannerRepository.save(banner);
 
+        // If image URL has changed, delete the old image
+        if (banner.getImageUrl() != null && !banner.getImageUrl().equals(updatedBanner.getImageUrl())) {
+            deleteImageIfExists(banner.getImageUrl());
+        }
+
         log.info("Banner updated successfully with ID: {}", updatedBanner.getId());
         return bannerMapper.toDto(updatedBanner);
     }
 
     @Override
+    @Transactional
     public BannerResponseDto deleteBanner(Long bannerId) {
         Long userId = securityUtils.getUserIdFromToken();
 
@@ -94,9 +100,12 @@ public class BannerServiceImpl implements BannerService {
 
         getUserOwnedShop(userId, banner.getShop().getId());
         log.info("Deleting banner ID: {} for shop ID: {}", bannerId, banner.getShop().getId());
+
         bannerRepository.delete(banner);
 
-        log.info("Banner deleted successfully: {}", bannerId);
+        deleteImageIfExists(banner.getImageUrl());
+
+        log.info("Banner and its associated image deleted successfully: {}", bannerId);
         return bannerMapper.toDto(banner);
     }
 
@@ -109,27 +118,63 @@ public class BannerServiceImpl implements BannerService {
                     return new NotFoundException(String.format(ErrorMessages.SHOP_NOT_FOUND, shopId));
                 });
 
-        // Fetch banners for the shop
         List<BannerEntity> banners = bannerRepository.findByShopId(shopId);
-        // Convert to DTO and return
+
         return banners.stream()
                 .map(bannerMapper::toDto)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Helper method to validate if the user owns the shop.
-     *
-     * @param userId The user ID
-     * @param shopId The shop ID
-     * @return ShopEntity if the user owns the shop
-     */
+
     private ShopEntity getUserOwnedShop(Long userId, Long shopId) {
         return shopRepository.findByIdAndUserId(shopId, userId)
                 .orElseThrow(() -> {
                     log.error("User {} does not own shop {}", userId, shopId);
                     return new NotFoundException(String.format(ErrorMessages.USER_DOES_NOT_OWN_SHOP, userId, shopId));
                 });
+    }
+
+    private UUID extractImageIdFromUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return null;
+        }
+
+        Pattern pattern = Pattern.compile("/api/v1/images/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})");
+        Matcher matcher = pattern.matcher(imageUrl);
+
+        if (matcher.find()) {
+            String uuidStr = matcher.group(1);
+            try {
+                return UUID.fromString(uuidStr);
+            } catch (IllegalArgumentException e) {
+                log.error("Failed to parse UUID from image URL: {}", imageUrl, e);
+                return null;
+            }
+        }
+
+        log.warn("No UUID found in image URL: {}", imageUrl);
+        return null;
+    }
+
+    /**
+     * Helper method to delete image if URL is valid and image exists
+     */
+    private void deleteImageIfExists(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            UUID imageId = extractImageIdFromUrl(imageUrl);
+            if (imageId != null) {
+                try {
+                    log.info("Deleting image with ID: {}", imageId);
+                    imageService.deleteImage(imageId);
+                } catch (NotFoundException e) {
+                    // Image was already deleted or not found - just log it
+                    log.warn("Image with ID {} not found for deletion", imageId);
+                } catch (Exception e) {
+                    // Log other errors but don't fail the transaction
+                    log.error("Error deleting image with ID {}: {}", imageId, e.getMessage());
+                }
+            }
+        }
     }
 
 }
