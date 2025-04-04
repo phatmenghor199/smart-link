@@ -1,12 +1,10 @@
 package com.menghor.smart_shop.feature.customer.dto.request;
 
 import com.menghor.smart_shop.enumations.StatusData;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class BannerRequestDto {
-    private String description;
-    private String imageUrl;
+public class BannerFilterDto {
+    private String search;
     private StatusData status;
 }

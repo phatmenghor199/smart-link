@@ -1,5 +1,6 @@
 package com.menghor.smart_shop.feature.customer.dto.resposne;
 
+import com.menghor.smart_shop.enumations.StatusData;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ public class BannerResponseDto {
     private String description;
     private String imageUrl;
     private Long shopId;
+    private StatusData status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

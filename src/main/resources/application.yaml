@@ -5,7 +5,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+#    show-sql: true
   datasource:
     url: jdbc:postgresql://ep-polished-flower-a1hcns4i-pooler.ap-southeast-1.aws.neon.tech:5432/smart_link?sslmode=require
     username: neondb_owner

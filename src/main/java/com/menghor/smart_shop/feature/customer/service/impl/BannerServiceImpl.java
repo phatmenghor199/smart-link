@@ -1,7 +1,9 @@
 package com.menghor.smart_shop.feature.customer.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
+import com.menghor.smart_shop.enumations.StatusData;
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.feature.customer.dto.request.BannerFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.BannerResponseDto;
 import com.menghor.smart_shop.feature.customer.mapper.BannerMapper;
@@ -10,11 +12,13 @@ import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.feature.customer.repository.BannerRepository;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.BannerService;
+import com.menghor.smart_shop.feature.customer.specification.BannerSpecification;
 import com.menghor.smart_shop.feature.setting.service.ImageService;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,24 +49,17 @@ public class BannerServiceImpl implements BannerService {
         BannerEntity bannerEntity = bannerMapper.toEntity(createRequest);
         bannerEntity.setShop(shop);
 
+        // Set status if provided, otherwise use default (ACTIVE)
+        if (createRequest.getStatus() != null) {
+            bannerEntity.setStatus(createRequest.getStatus());
+        } else {
+            bannerEntity.setStatus(StatusData.ACTIVE);
+        }
+
         BannerEntity savedBanner = bannerRepository.save(bannerEntity);
         log.info("Banner created successfully with ID: {}", savedBanner.getId());
 
         return bannerMapper.toDto(savedBanner);
-    }
-
-    @Override
-    public List<BannerResponseDto> getBannersByShop() {
-        Long userId = securityUtils.getUserIdFromToken();
-        Long shopId = securityUtils.getShopIdFromToken();
-
-        log.info("Fetching banners for shopId: {} by userId: {}", shopId, userId);
-
-        getUserOwnedShop(userId, shopId);
-        List<BannerEntity> banners = bannerRepository.findByShopId(shopId);
-        return banners.stream()
-                .map(bannerMapper::toDto)
-                .collect(Collectors.toList());
     }
 
     @Override
@@ -77,13 +74,22 @@ public class BannerServiceImpl implements BannerService {
 
         getUserOwnedShop(userId, banner.getShop().getId());
 
+        // Store original image URL to check for changes
+        String originalImageUrl = banner.getImageUrl();
+
+        // Update banner fields but preserve ID, shop, status, and createdAt timestamp
         bannerMapper.updateBannerFromDto(updateRequest, banner);
+
+        // Update status if specifically provided in the request
+        if (updateRequest.getStatus() != null) {
+            banner.setStatus(updateRequest.getStatus());
+        }
 
         BannerEntity updatedBanner = bannerRepository.save(banner);
 
         // If image URL has changed, delete the old image
-        if (banner.getImageUrl() != null && !banner.getImageUrl().equals(updatedBanner.getImageUrl())) {
-            deleteImageIfExists(banner.getImageUrl());
+        if (originalImageUrl != null && !originalImageUrl.equals(updatedBanner.getImageUrl())) {
+            deleteImageIfExists(originalImageUrl);
         }
 
         log.info("Banner updated successfully with ID: {}", updatedBanner.getId());
@@ -125,6 +131,26 @@ public class BannerServiceImpl implements BannerService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<BannerResponseDto> getBannersByShop(BannerFilterDto filterDto) {
+        Long shopId = securityUtils.getShopIdFromToken();
+        log.info("Filtering banners for shop ID: {} with criteria: {}", shopId, filterDto);
+
+        // Create specification using filter criteria
+        Specification<BannerEntity> spec = BannerSpecification.createSpecification(
+                filterDto.getSearch(),
+                filterDto.getStatus(),
+                shopId
+        );
+
+        // Execute the query with specification
+        List<BannerEntity> banners = bannerRepository.findAll(spec);
+
+        // Map to DTOs
+        return banners.stream()
+                .map(bannerMapper::toDto)
+                .collect(Collectors.toList());
+    }
 
     private ShopEntity getUserOwnedShop(Long userId, Long shopId) {
         return shopRepository.findByIdAndUserId(shopId, userId)
@@ -139,7 +165,7 @@ public class BannerServiceImpl implements BannerService {
             return null;
         }
 
-        Pattern pattern = Pattern.compile("/api/v1/images/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})");
+        Pattern pattern = Pattern.compile("/images/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})");
         Matcher matcher = pattern.matcher(imageUrl);
 
         if (matcher.find()) {
@@ -176,6 +202,5 @@ public class BannerServiceImpl implements BannerService {
             }
         }
     }
-
 }
 

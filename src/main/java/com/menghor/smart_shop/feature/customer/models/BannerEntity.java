@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "banners")
 @Data
-@NoArgsConstructor
 public class BannerEntity extends BaseEntity {
 
     @Id
@@ -24,7 +23,6 @@ public class BannerEntity extends BaseEntity {
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private StatusData status = StatusData.ACTIVE;
 
     @ManyToOne(fetch = FetchType.LAZY)
