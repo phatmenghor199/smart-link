@@ -1,5 +1,6 @@
 package com.menghor.smart_shop.feature.customer.models;
 
+import com.menghor.smart_shop.enumations.StatusData;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -20,6 +21,9 @@ public class CategoryEntity extends BaseEntity {
     private Long id;
 
     private String name;
+    @Enumerated(EnumType.STRING)
+    private StatusData status = StatusData.ACTIVE;
+    private String imageUrl;
 
     @ManyToOne
     @JoinColumn(name = "shop_id")

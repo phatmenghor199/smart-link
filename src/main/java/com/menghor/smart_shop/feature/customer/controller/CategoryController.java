@@ -26,7 +26,6 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CategoryResponseDto> createCategory(@Valid @RequestBody CategoryRequestDto createRequest) {
         log.info("Received request to create category");
-
         return new ApiResponse<>("Success", "Category created successfully", categoryService.createCategory(createRequest));
     }
 
@@ -36,7 +35,6 @@ public class CategoryController {
     @GetMapping("/{categoryId}")
     public ApiResponse<CategoryResponseDto> getCategoryById(@PathVariable Long categoryId) {
         log.info("Received request to get category by Id");
-
         return new ApiResponse<>("Success", "Category by ID response successfully", categoryService.getCategoryById(categoryId));
     }
 
@@ -46,7 +44,6 @@ public class CategoryController {
     @GetMapping("/shop")
     public ApiResponse<List<CategoryResponseDto>> getCategoriesByShop() {
         log.info("Received request to get category by shop");
-
         final List<CategoryResponseDto> categoriesByShop = categoryService.getCategoriesByShop();
         return new ApiResponse<>("Success", "Category by shop response successfully", categoriesByShop);
     }
@@ -57,7 +54,6 @@ public class CategoryController {
     @PutMapping("/{categoryId}")
     public ApiResponse<CategoryResponseDto> updateCategory(@PathVariable Long categoryId,
                                                            @RequestBody CategoryRequestDto requestDto) {
-
         log.info("Received request to update category by id");
         final CategoryResponseDto categoryResponseDto = categoryService.updateCategory(categoryId, requestDto);
         return new ApiResponse<>("Success", "Category updated by id successfully", categoryResponseDto);
