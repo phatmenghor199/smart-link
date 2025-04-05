@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.setting.controller;
 
 import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptoins.response.ApiResponse;
 import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;
@@ -23,9 +24,9 @@ public class ImageController {
     private final ImageRepository imageRepository;
 
     @PostMapping
-    public ResponseEntity<ImageResponseDto> storeImage(@RequestBody ImageRequestDto imageRequestDto) {
+    public ApiResponse<ImageResponseDto> storeImage(@RequestBody ImageRequestDto imageRequestDto) {
         ImageResponseDto imageResponse = imageService.storeImage(imageRequestDto);
-        return ResponseEntity.ok(imageResponse);
+        return new ApiResponse<>("Success", "Images uploaded successfully", imageResponse);
     }
 
     @GetMapping("/{id}")

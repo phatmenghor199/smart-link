@@ -12,12 +12,22 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000") // Add your Next.js app URL here bro
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOrigins("*") // Allow all origins
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true); // Important for cookies/auth
-    }
+                .exposedHeaders("Authorization", "Content-Type", "Content-Disposition");
 
+        // Note: If you need credentials, you can't use "*" for origins
+        // Instead, you would need to specify exact origins:
+        /*
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:3000", "https://yourdomain.com")
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization", "Content-Type", "Content-Disposition")
+                .allowCredentials(true);
+        */
+    }
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configure) {

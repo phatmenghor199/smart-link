@@ -7,4 +7,6 @@ import lombok.Data;
 public class BannerFilterDto {
     private String search;
     private StatusData status;
+    private Integer pageNo = 1;
+    private Integer pageSize = 10;
 }

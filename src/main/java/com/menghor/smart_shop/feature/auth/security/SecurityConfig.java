@@ -18,7 +18,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -43,6 +43,7 @@ public class SecurityConfig {
                         sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(authorize -> authorize
+                        // Public endpoints that don't require authentication
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/v3/api-docs*/**",
@@ -53,8 +54,13 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/api/v1/plans/**",
                                 "/api/v1/subscriptions/check/**",
-                                "/api/v1/images/**"
+                                "/api/v1/images/**",
+                                "/favicon.ico",
+                                "/*.ico",
+                                "/static/**",
+                                "/error"         // Add the error page
                         ).permitAll()
+                        // All other requests need authentication
                         .anyRequest().authenticated()
                 )
                 .httpBasic(httpBasic -> {})
@@ -66,10 +72,24 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+
+        // Allow all origins
+        configuration.setAllowedOrigins(Collections.singletonList("*"));
+
+        // Or if you need credentials to be included, use the following instead
+        // (but then specific origins must be listed rather than wildcard "*")
+        // configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+        // configuration.setAllowCredentials(true);
+
+        // Allow all common methods
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        // Allow all headers
+        configuration.setAllowedHeaders(Collections.singletonList("*"));
+
+        // Allow browsers to access these headers in responses
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Content-Disposition"));
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

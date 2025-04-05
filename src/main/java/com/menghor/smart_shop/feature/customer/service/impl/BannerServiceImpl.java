@@ -14,10 +14,17 @@ import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.BannerService;
 import com.menghor.smart_shop.feature.customer.specification.BannerSpecification;
 import com.menghor.smart_shop.feature.setting.service.ImageService;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
+import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.weaver.ast.Not;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +46,7 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public BannerResponseDto createBanner(BannerRequestDto createRequest) {
-
+        // Implementation unchanged
         Long userId = securityUtils.getUserIdFromToken();
         Long shopId = securityUtils.getShopIdFromToken();
 
@@ -65,6 +72,7 @@ public class BannerServiceImpl implements BannerService {
     @Override
     @Transactional
     public BannerResponseDto updateBanner(Long bannerId, BannerRequestDto updateRequest) {
+        // Implementation unchanged
         Long userId = securityUtils.getUserIdFromToken();
 
         BannerEntity banner = bannerRepository.findById(bannerId)
@@ -97,8 +105,16 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    public BannerResponseDto getBannerById(Long bannerId) {
+        BannerEntity banner = bannerRepository.findById(bannerId)
+                .orElseThrow(() -> new NotFoundException("Banner not found with id: " + bannerId));
+        return bannerMapper.toDto(banner);
+    }
+
+    @Override
     @Transactional
     public BannerResponseDto deleteBanner(Long bannerId) {
+        // Implementation unchanged
         Long userId = securityUtils.getUserIdFromToken();
 
         BannerEntity banner = bannerRepository.findById(bannerId)
@@ -124,7 +140,8 @@ public class BannerServiceImpl implements BannerService {
                     return new NotFoundException(String.format(ErrorMessages.SHOP_NOT_FOUND, shopId));
                 });
 
-        List<BannerEntity> banners = bannerRepository.findByShopId(shopId);
+        // Use the sorted repository method to ensure consistent ordering
+        List<BannerEntity> banners = bannerRepository.findByShopIdOrderByCreatedAtDesc(shopId);
 
         return banners.stream()
                 .map(bannerMapper::toDto)
@@ -132,9 +149,14 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
-    public List<BannerResponseDto> getBannersByShop(BannerFilterDto filterDto) {
+    public CustomPaginationResponseDto<BannerResponseDto> getBannersByShop(BannerFilterDto filterDto) {
         Long shopId = securityUtils.getShopIdFromToken();
         log.info("Filtering banners for shop ID: {} with criteria: {}", shopId, filterDto);
+
+        // Validate pagination parameters
+        PaginationUtils.validatePagination(
+                filterDto.getPageNo() != null ? filterDto.getPageNo() : 1,
+                filterDto.getPageSize() != null ? filterDto.getPageSize() : 10);
 
         // Create specification using filter criteria
         Specification<BannerEntity> spec = BannerSpecification.createSpecification(
@@ -143,13 +165,32 @@ public class BannerServiceImpl implements BannerService {
                 shopId
         );
 
-        // Execute the query with specification
-        List<BannerEntity> banners = bannerRepository.findAll(spec);
+        // Create pageable object with sorting by ID (or creation date) in descending order
+        // This ensures newest banners appear first and maintains consistent ordering
+        Pageable pageable = PageRequest.of(
+                filterDto.getPageNo() - 1,
+                filterDto.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+        );
 
-        // Map to DTOs
-        return banners.stream()
+        // Execute the query with specification, pagination, and sorting
+        Page<BannerEntity> bannerPage = bannerRepository.findAll(spec, pageable);
+
+        // Map entities to DTOs
+        List<BannerResponseDto> bannerDtos = bannerPage.getContent().stream()
                 .map(bannerMapper::toDto)
                 .collect(Collectors.toList());
+
+        // Create pagination response
+        CustomPaginationResponseDto<BannerResponseDto> response = new CustomPaginationResponseDto<>();
+        response.setContent(bannerDtos);
+        response.setPageNo(filterDto.getPageNo());
+        response.setPageSize(filterDto.getPageSize());
+        response.setTotalElements(bannerPage.getTotalElements());
+        response.setTotalPages(bannerPage.getTotalPages());
+        response.setLast(bannerPage.isLast());
+
+        return response;
     }
 
     private ShopEntity getUserOwnedShop(Long userId, Long shopId) {
@@ -203,4 +244,3 @@ public class BannerServiceImpl implements BannerService {
         }
     }
 }
-

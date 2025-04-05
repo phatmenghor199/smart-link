@@ -10,7 +10,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SubscriptionSecurityConfig implements WebMvcConfigurer {
 
     private final SubscriptionInterceptor subscriptionInterceptor;
-    
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(subscriptionInterceptor)
@@ -21,7 +21,11 @@ public class SubscriptionSecurityConfig implements WebMvcConfigurer {
                         "/api/v1/subscriptions/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
-                        "/api/v1/images/**"
+                        "/api/v1/images/**",
+                        "/favicon.ico",
+                        "/*.ico",
+                        "/static/**",
+                        "/error"         // Add the error page
                 );
     }
 }

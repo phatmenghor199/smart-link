@@ -6,6 +6,7 @@ import com.menghor.smart_shop.feature.customer.dto.request.BannerFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.BannerResponseDto;
 import com.menghor.smart_shop.feature.customer.service.BannerService;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +35,24 @@ public class BannerController {
     }
 
     /**
-     * Get all banners for the current shop
+     * Get all banners for the current shop with pagination
      */
     @PostMapping("/shop/all")
-    public ApiResponse<List<BannerResponseDto>> getBanners(@RequestBody BannerFilterDto request) {
-        log.info("Fetching banners for the current shop");
-        final List<BannerResponseDto> bannersByShop = bannerService.getBannersByShop(request);
+    public ApiResponse<CustomPaginationResponseDto<BannerResponseDto>> getBanners(@RequestBody BannerFilterDto request) {
+        log.info("Fetching banners for the current shop with pagination");
+        final CustomPaginationResponseDto<BannerResponseDto> bannersByShop = bannerService.getBannersByShop(request);
         return new ApiResponse<>("Success", "Banner by shop successfully", bannersByShop);
+    }
+
+    /**
+     * Get banners by ID
+     */
+    @GetMapping("/{bannerId}")
+    public ApiResponse<BannerResponseDto> getBannerById(
+            @PathVariable Long bannerId) {
+        log.info("Get banner with ID: {}", bannerId);
+        final BannerResponseDto bannerResponseDto = bannerService.getBannerById(bannerId);
+        return new ApiResponse<>("Success", "Banner get by ID successfully", bannerResponseDto);
     }
 
     /**
