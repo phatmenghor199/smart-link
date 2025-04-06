@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.customer.dto.resposne;
 
 import com.menghor.smart_shop.enumations.DiscountType;
+import com.menghor.smart_shop.enumations.StatusData;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -16,5 +17,6 @@ public class ProductSizeResponseDto {
     private Double discountValue;
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
+    private StatusData status;
     private Long productId;
 }

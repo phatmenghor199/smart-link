@@ -2,6 +2,8 @@ package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.enumations.PromotionStatus;
+import com.menghor.smart_shop.enumations.StatusData;
+import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -33,7 +35,9 @@ public class ProductEntity extends BaseEntity {
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
 
-    private Integer stockQuantity; // Add stock quantity field
+    // Add status field
+    @Enumerated(EnumType.STRING)
+    private StatusData status = StatusData.ACTIVE; // Default to active
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
@@ -45,6 +49,11 @@ public class ProductEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "product")
     private List<ProductSizeEntity> sizes;
+
+    // Added image support
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "image_id")
+    private ImageEntity image;
 
     // Compute final price based on discount type
     public Double getFinalPrice() {
@@ -77,5 +86,4 @@ public class ProductEntity extends BaseEntity {
     public PromotionStatus getPromotionStatus() {
         return isPromotionActive() ? PromotionStatus.ACTIVE : PromotionStatus.INACTIVE;
     }
-
 }

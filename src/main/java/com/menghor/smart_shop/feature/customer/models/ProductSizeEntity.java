@@ -1,7 +1,9 @@
+// Modified ProductSizeEntity.java with Status
 package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.enumations.PromotionStatus;
+import com.menghor.smart_shop.enumations.StatusData;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -33,7 +35,9 @@ public class ProductSizeEntity extends BaseEntity {
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
 
-    private Integer stockQuantity; // Add stock quantity field
+    // Add status field
+    @Enumerated(EnumType.STRING)
+    private StatusData status = StatusData.ACTIVE; // Default to active
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
