@@ -26,8 +26,12 @@ public class ProductRequestDto {
     private LocalDate discountStartDate; // Discount start date
     private LocalDate discountEndDate; // Discount end date
 
-    private List<ProductSizeRequestDto> sizes;
-
-    // Image field
+    // Main product image
     private ImageRequestDto image;
+
+    // Additional product images
+    private List<ImageRequestDto> additionalImages;
+
+    // Product sizes
+    private List<ProductSizeRequestDto> sizes;
 }

@@ -1,9 +1,9 @@
-// Modified ProductSizeEntity.java with Status
 package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.enumations.PromotionStatus;
 import com.menghor.smart_shop.enumations.StatusData;
+import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -43,6 +45,18 @@ public class ProductSizeEntity extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private ProductEntity product; // Each size belongs to a product
 
+    // Main size image (single image)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "main_image_id")
+    private ImageEntity mainImage;
+
+    // Multiple size images
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(name = "product_size_additional_images",
+            joinColumns = @JoinColumn(name = "product_size_id"),
+            inverseJoinColumns = @JoinColumn(name = "image_id"))
+    private List<ImageEntity> additionalImages = new ArrayList<>();
+
     // Compute final price based on discount type
     public Double getFinalPrice() {
         if (isPromotionActive()) {
@@ -53,6 +67,14 @@ public class ProductSizeEntity extends BaseEntity {
             }
         }
         return price;
+    }
+
+    // Method to add an additional image
+    public void addAdditionalImage(ImageEntity image) {
+        if (this.additionalImages == null) {
+            this.additionalImages = new ArrayList<>();
+        }
+        this.additionalImages.add(image);
     }
 
     // Check if the promotion is active

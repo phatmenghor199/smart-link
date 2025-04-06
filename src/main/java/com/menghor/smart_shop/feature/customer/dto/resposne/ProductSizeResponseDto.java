@@ -2,9 +2,11 @@ package com.menghor.smart_shop.feature.customer.dto.resposne;
 
 import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.enumations.StatusData;
+import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class ProductSizeResponseDto {
@@ -19,4 +21,10 @@ public class ProductSizeResponseDto {
     private LocalDate discountEndDate;
     private StatusData status;
     private Long productId;
+
+    // Main image for the product size
+    private ImageResponseDto mainImage;
+
+    // Additional images for the product size
+    private List<ImageResponseDto> additionalImages;
 }

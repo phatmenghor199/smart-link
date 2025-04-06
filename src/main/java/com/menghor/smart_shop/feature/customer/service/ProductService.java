@@ -6,6 +6,7 @@ import com.menghor.smart_shop.feature.customer.dto.request.ProductFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
+import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 
 public interface ProductService {
@@ -13,18 +14,8 @@ public interface ProductService {
     ProductResponseDto createProduct(ProductRequestDto requestDto);
     ProductResponseDto addSizesToProduct(Long productId, List<ProductSizeRequestDto> sizeRequest);
 
-    // Get methods with ID
-    ProductResponseDto getProductById(Long id);
-
-    // Get all products for a shop
-    List<ProductResponseDto> getProductsByShop();
-
     // Get products with pagination and filtering
     CustomPaginationResponseDto<ProductResponseDto> getProductsByShopWithFilter(ProductFilterDto filterDto);
-
-    // Get products by category
-    List<ProductResponseDto> getProductsByCategory(Long categoryId);
-    CustomPaginationResponseDto<ProductResponseDto> getProductsByCategoryWithFilter(Long categoryId, ProductFilterDto filterDto);
 
     // Get all products (usually for admin)
     List<ProductResponseDto> getAllProducts();
@@ -53,4 +44,11 @@ public interface ProductService {
     CustomPaginationResponseDto<ProductResponseDto> getProductsWithActivePromotionsWithFilter(ProductFilterDto filterDto);
     List<ProductResponseDto> getProductsWithActivePromotionsByShop();
     CustomPaginationResponseDto<ProductResponseDto> getProductsWithActivePromotionsByShopWithFilter(ProductFilterDto filterDto);
+
+    // New image-related methods
+    ProductResponseDto addAdditionalImagesToProduct(Long productId, List<ImageEntity> images);
+    ProductResponseDto removeAdditionalImageFromProduct(Long productId, Long imageId);
+
+    ProductResponseDto addAdditionalImagesToProductSize(Long productId, Long sizeId, List<ImageEntity> images);
+    ProductResponseDto removeAdditionalImageFromProductSize(Long productId, Long sizeId, Long imageId);
 }

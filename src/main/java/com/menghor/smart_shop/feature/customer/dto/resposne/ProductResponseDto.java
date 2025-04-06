@@ -20,7 +20,6 @@ public class ProductResponseDto {
     private String size;
     private Double price;
     private StatusData status;
-
     private Double finalPrice;
     private String promotionStatus;
 
@@ -32,8 +31,11 @@ public class ProductResponseDto {
     private LocalDate discountStartDate;
     private LocalDate discountEndDate;
 
-    // Add image response field
-    private ImageResponseDto image;
+    // Main image for the product
+    private ImageResponseDto mainImage;
+
+    // Additional images for the product
+    private List<ImageResponseDto> additionalImages;
 
     private List<ProductSizeResponseDto> sizes;
 

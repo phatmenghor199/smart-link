@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -50,10 +51,17 @@ public class ProductEntity extends BaseEntity {
     @OneToMany(mappedBy = "product")
     private List<ProductSizeEntity> sizes;
 
-    // Added image support
+    // Main product image (single image)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "image_id")
-    private ImageEntity image;
+    @JoinColumn(name = "main_image_id")
+    private ImageEntity mainImage;
+
+    // Multiple product images
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(name = "product_additional_images",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "image_id"))
+    private List<ImageEntity> additionalImages = new ArrayList<>();
 
     // Compute final price based on discount type
     public Double getFinalPrice() {
@@ -73,6 +81,14 @@ public class ProductEntity extends BaseEntity {
         this.discountValue = null;
         this.discountStartDate = null;
         this.discountEndDate = null;
+    }
+
+    // Method to add an additional image
+    public void addAdditionalImage(ImageEntity image) {
+        if (this.additionalImages == null) {
+            this.additionalImages = new ArrayList<>();
+        }
+        this.additionalImages.add(image);
     }
 
     // Check if the promotion is active
