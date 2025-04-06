@@ -1,6 +1,7 @@
 package com.menghor.smart_shop.feature.customer.models;
 
 import com.menghor.smart_shop.enumations.StatusData;
+import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.utils.database.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -31,4 +32,9 @@ public class CategoryEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<ProductEntity> products; // One category can have many products
+
+    // Direct one-to-one relationship with image
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "image_id")
+    private ImageEntity image;
 }

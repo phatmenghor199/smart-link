@@ -22,4 +22,8 @@ public class ImageEntity extends BaseEntity {
     @Lob
     @Column(columnDefinition = "TEXT")
     private String base64Image;
+
+    // Reference field to track what entity type owns this image (e.g., "category", "banner", "product")
+    // Null means the image is not associated with any entity yet
+    private String referenceType;
 }

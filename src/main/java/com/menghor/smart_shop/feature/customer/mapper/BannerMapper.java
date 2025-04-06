@@ -3,19 +3,41 @@ package com.menghor.smart_shop.feature.customer.mapper;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.BannerResponseDto;
 import com.menghor.smart_shop.feature.customer.models.BannerEntity;
-import org.hibernate.sql.Update;
+import com.menghor.smart_shop.feature.setting.mapper.ImageMapper;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import org.mapstruct.*;
-import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 
-@Mapper(componentModel = "spring")
-public interface BannerMapper {
-    BannerMapper INSTANCE = Mappers.getMapper(BannerMapper.class);
+import java.util.List;
 
-    BannerEntity toEntity(BannerRequestDto bannerRequestDto);
+@Mapper(componentModel = "spring", uses = {ImageMapper.class})
+public abstract class BannerMapper {
 
-    @Mapping(source = "shop.id", target = "shopId") // Map shop ID to banner DTO
-    BannerResponseDto toDto(BannerEntity bannerEntity);
+    @Autowired
+    protected ImageMapper imageMapper;
+
+    @Mapping(target = "image", source = "image")
+    public abstract BannerEntity toEntity(BannerRequestDto bannerRequestDto);
+
+    @Mapping(source = "shop.id", target = "shopId")
+    @Mapping(source = "image", target = "image")
+    public abstract BannerResponseDto toDto(BannerEntity bannerEntity);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateBannerFromDto(BannerRequestDto dto, @MappingTarget BannerEntity entity);
+    @Mapping(target = "image.referenceType", ignore = true) // Explicitly ignore referenceType during update
+    public abstract void updateBannerFromDto(BannerRequestDto dto, @MappingTarget BannerEntity entity);
+
+    public CustomPaginationResponseDto<BannerResponseDto> toPaginationDto(
+            List<BannerResponseDto> content,
+            Page<BannerEntity> page) {
+        CustomPaginationResponseDto<BannerResponseDto> response = new CustomPaginationResponseDto<>();
+        response.setContent(content);
+        response.setPageNo(page.getNumber() + 1);
+        response.setPageSize(page.getSize());
+        response.setTotalElements(page.getTotalElements());
+        response.setTotalPages(page.getTotalPages());
+        response.setLast(page.isLast());
+        return response;
+    }
 }

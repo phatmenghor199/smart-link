@@ -5,11 +5,20 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
+      show-sql: true
+      format_sql: true
+
+
 #    show-sql: true
+#  datasource:
+#    url: jdbc:postgresql://ep-polished-flower-a1hcns4i-pooler.ap-southeast-1.aws.neon.tech:5432/smart_link?sslmode=require
+#    username: neondb_owner
+#    password: npg_xWZ4N8SnXHkl
+#    driver-class-name: org.postgresql.Driver
   datasource:
-    url: jdbc:postgresql://ep-polished-flower-a1hcns4i-pooler.ap-southeast-1.aws.neon.tech:5432/smart_link?sslmode=require
-    username: neondb_owner
-    password: npg_xWZ4N8SnXHkl
+    url: jdbc:postgresql://localhost:5433/smart_shop
+    username: postgres
+    password: Hour1819
     driver-class-name: org.postgresql.Driver
 
   mvc:
@@ -39,7 +48,7 @@ logging:
 
 
 server:
-  port: 8080
+  port: 8081
 
 jwt:
   secret:

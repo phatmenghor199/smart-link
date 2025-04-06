@@ -9,14 +9,13 @@ import com.menghor.smart_shop.feature.setting.repository.ImageRepository;
 import com.menghor.smart_shop.feature.setting.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Base64Utils;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -29,7 +28,7 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     public ImageResponseDto storeImage(ImageRequestDto imageRequestDto) {
-        log.info("Storing image with name: {}", imageRequestDto.getImageType());
+        log.info("Storing image with type: {}", imageRequestDto.getImageType());
 
         ImageEntity imageEntity = imageMapper.toEntity(imageRequestDto);
         imageEntity = imageRepository.save(imageEntity);
@@ -78,5 +77,32 @@ public class ImageServiceImpl implements ImageService {
         log.info("Image updated with ID: {}", imageEntity.getId());
 
         return imageMapper.toDto(imageEntity);
+    }
+
+    /**
+     * Scheduled task to clean up unreferenced (orphaned) images
+     * Runs once a day at 3 AM
+     */
+    @Scheduled(cron = "0 0 3 * * ?")
+    @Transactional
+    public void cleanupOrphanedImages() {
+        log.info("Starting scheduled task: Cleaning up orphaned images");
+
+        // Find images that haven't been referenced and are older than 24 hours
+        LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
+        List<ImageEntity> orphanedImages = imageRepository.findUnreferencedImagesCreatedBefore(cutoffTime);
+
+        log.info("Found {} orphaned images to clean up", orphanedImages.size());
+
+        for (ImageEntity image : orphanedImages) {
+            try {
+                log.info("Deleting orphaned image with ID: {}", image.getId());
+                imageRepository.delete(image);
+            } catch (Exception e) {
+                log.error("Error deleting orphaned image {}: {}", image.getId(), e.getMessage());
+            }
+        }
+
+        log.info("Completed orphaned image cleanup");
     }
 }
