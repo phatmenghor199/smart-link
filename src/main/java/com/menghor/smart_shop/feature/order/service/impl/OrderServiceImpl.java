@@ -225,17 +225,21 @@ public class OrderServiceImpl implements OrderService {
             ProductSizeEntity size = cartItem.getSize();
             if (size != null) {
                 orderItem.setSize(size);
-//                if (size.getStockQuantity() == null || size.getStockQuantity() < orderItem.getQuantity()) {
-//                    throw new BadRequestException("Product size out of stock");
-//                }
-                size.setStockQuantity(size.getStockQuantity());
+                // Uncomment and modify these lines if you want to handle stock quantity
+                // Integer currentStockQuantity = size.getStockQuantity();
+                // if (currentStockQuantity == null || currentStockQuantity < orderItem.getQuantity()) {
+                //     throw new BadRequestException("Product size out of stock");
+                // }
+                // size.setStockQuantity(currentStockQuantity - orderItem.getQuantity());
                 productSizeRepository.save(size);
             } else {
                 ProductEntity product = cartItem.getProduct();
-//                if (product.getStockQuantity() == null || product.getStockQuantity() < orderItem.getQuantity()) {
-//                    throw new BadRequestException("Product out of stock");
-//                }
-                product.setStockQuantity(product.getStockQuantity());
+                // Uncomment and modify these lines if you want to handle stock quantity
+                // Integer currentStockQuantity = product.getStockQuantity();
+                // if (currentStockQuantity == null || currentStockQuantity < orderItem.getQuantity()) {
+                //     throw new BadRequestException("Product out of stock");
+                // }
+                // product.setStockQuantity(currentStockQuantity - orderItem.getQuantity());
                 productRepository.save(product);
             }
 
