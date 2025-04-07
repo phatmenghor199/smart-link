@@ -7,6 +7,7 @@ import com.menghor.smart_shop.feature.customer.dto.request.ProductFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
+import com.menghor.smart_shop.feature.customer.dto.resposne.ProductSizeResponseDto;
 import com.menghor.smart_shop.feature.customer.mapper.ProductMapper;
 import com.menghor.smart_shop.feature.customer.models.CategoryEntity;
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
@@ -17,6 +18,7 @@ import com.menghor.smart_shop.feature.customer.repository.ProductSizeRepository;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
 import com.menghor.smart_shop.feature.customer.specification.ProductSpecification;
+import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.feature.setting.repository.ImageRepository;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
@@ -33,6 +35,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -251,10 +254,103 @@ public class ProductServiceImpl implements ProductService {
         // Execute query with specification
         Page<ProductEntity> productPage = productRepository.findAll(spec, pageable);
 
-        // Map entities to DTOs
-        List<ProductResponseDto> productDtos = productPage.getContent().stream()
-                .map(productMapper::toDto)
-                .collect(Collectors.toList());
+        // Map entities to DTOs, but manually handle the image mapping to avoid LOB stream issues
+        List<ProductResponseDto> productDtos = new ArrayList<>();
+
+        for (ProductEntity product : productPage.getContent()) {
+            try {
+                ProductResponseDto dto = new ProductResponseDto();
+
+                // Set basic fields
+                dto.setId(product.getId());
+                dto.setName(product.getName());
+                dto.setPrice(product.getPrice());
+                dto.setStatus(product.getStatus());
+                dto.setFinalPrice(product.getFinalPrice());
+                dto.setPromotionStatus(product.getPromotionStatus().name());
+                dto.setCategoryId(product.getCategory() != null ? product.getCategory().getId() : null);
+                dto.setShopId(product.getShop() != null ? product.getShop().getId() : null);
+                dto.setDiscountType(product.getDiscountType());
+                dto.setDiscountValue(product.getDiscountValue());
+                dto.setDiscountStartDate(product.getDiscountStartDate());
+                dto.setDiscountEndDate(product.getDiscountEndDate());
+                dto.setCreatedAt(product.getCreatedAt());
+                dto.setUpdatedAt(product.getUpdatedAt());
+
+                // Handle main image without accessing base64 content
+                if (product.getMainImage() != null && product.getMainImage().getId() != null) {
+                    ImageResponseDto imageDto = new ImageResponseDto();
+                    imageDto.setId(product.getMainImage().getId());
+                    imageDto.setUrl("/api/v1/images/" + product.getMainImage().getId());
+                    dto.setMainImage(imageDto);
+                }
+
+                // Handle additional images without accessing base64 content
+                if (product.getAdditionalImages() != null && !product.getAdditionalImages().isEmpty()) {
+                    List<ImageResponseDto> additionalImageDtos = new ArrayList<>();
+                    for (ImageEntity image : product.getAdditionalImages()) {
+                        if (image != null && image.getId() != null) {
+                            ImageResponseDto imageDto = new ImageResponseDto();
+                            imageDto.setId(image.getId());
+                            imageDto.setUrl("/api/v1/images/" + image.getId());
+                            additionalImageDtos.add(imageDto);
+                        }
+                    }
+                    dto.setAdditionalImages(additionalImageDtos);
+                }
+
+                // Handle product sizes without accessing base64 content
+                if (product.getSizes() != null && !product.getSizes().isEmpty()) {
+                    List<ProductSizeResponseDto> sizeDtos = new ArrayList<>();
+                    for (ProductSizeEntity size : product.getSizes()) {
+                        if (size != null) {
+                            ProductSizeResponseDto sizeDto = new ProductSizeResponseDto();
+                            sizeDto.setId(size.getId());
+                            sizeDto.setSize(size.getSize());
+                            sizeDto.setPrice(size.getPrice());
+                            sizeDto.setFinalPrice(size.getFinalPrice());
+                            sizeDto.setPromotionStatus(size.getPromotionStatus().name());
+                            sizeDto.setDiscountType(size.getDiscountType());
+                            sizeDto.setDiscountValue(size.getDiscountValue());
+                            sizeDto.setDiscountStartDate(size.getDiscountStartDate());
+                            sizeDto.setDiscountEndDate(size.getDiscountEndDate());
+                            sizeDto.setStatus(size.getStatus());
+                            sizeDto.setProductId(product.getId());
+
+                            // Handle size main image
+                            if (size.getMainImage() != null && size.getMainImage().getId() != null) {
+                                ImageResponseDto imageDto = new ImageResponseDto();
+                                imageDto.setId(size.getMainImage().getId());
+                                imageDto.setUrl("/api/v1/images/" + size.getMainImage().getId());
+                                sizeDto.setMainImage(imageDto);
+                            }
+
+                            // Handle size additional images
+                            if (size.getAdditionalImages() != null && !size.getAdditionalImages().isEmpty()) {
+                                List<ImageResponseDto> sizeImageDtos = new ArrayList<>();
+                                for (ImageEntity image : size.getAdditionalImages()) {
+                                    if (image != null && image.getId() != null) {
+                                        ImageResponseDto imageDto = new ImageResponseDto();
+                                        imageDto.setId(image.getId());
+                                        imageDto.setUrl("/api/v1/images/" + image.getId());
+                                        sizeImageDtos.add(imageDto);
+                                    }
+                                }
+                                sizeDto.setAdditionalImages(sizeImageDtos);
+                            }
+
+                            sizeDtos.add(sizeDto);
+                        }
+                    }
+                    dto.setSizes(sizeDtos);
+                }
+
+                productDtos.add(dto);
+            } catch (Exception e) {
+                log.error("Error mapping product {}: {}", product.getId(), e.getMessage());
+                // Continue with next product
+            }
+        }
 
         // Create pagination response
         CustomPaginationResponseDto<ProductResponseDto> response = new CustomPaginationResponseDto<>();
