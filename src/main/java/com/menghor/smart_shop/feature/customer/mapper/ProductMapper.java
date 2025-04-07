@@ -9,12 +9,12 @@ import com.menghor.smart_shop.feature.customer.models.ProductSizeEntity;
 import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.ImageMapper;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;
+import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {ImageMapper.class})
@@ -23,69 +23,105 @@ public abstract class ProductMapper {
     @Autowired
     protected ImageMapper imageMapper;
 
+    // Comprehensive mapping for ProductEntity to ProductResponseDto
     @Mapping(source = "category.id", target = "categoryId")
     @Mapping(source = "shop.id", target = "shopId")
-    @Mapping(target = "finalPrice", expression = "java(product.getFinalPrice())")
-    @Mapping(target = "promotionStatus", expression = "java(product.getPromotionStatus().name())")
-    @Mapping(target = "mainImage", expression = "java(mapImageWithoutBase64(product.getMainImage()))")
-    @Mapping(target = "additionalImages", expression = "java(mapImagesWithoutBase64(product.getAdditionalImages()))")
-    @Mapping(target = "sizes", expression = "java(mapSizesWithoutBase64(product.getSizes()))")
+    @Mapping(target = "finalPrice", expression = "java(getProductFinalPrice(product))")
+    @Mapping(target = "promotionStatus", expression = "java(getProductPromotionStatus(product))")
+    @Mapping(target = "mainImage", qualifiedByName = "mapProductMainImage")
+    @Mapping(target = "additionalImages", qualifiedByName = "mapProductAdditionalImages")
+    @Mapping(target = "sizes", qualifiedByName = "mapProductSizes")
     public abstract ProductResponseDto toDto(ProductEntity product);
 
-    // Helper method to map image without accessing base64 content
-    protected ImageResponseDto mapImageWithoutBase64(ImageEntity image) {
-        if (image == null || image.getId() == null) return null;
+    // Pagination helper method
+    public CustomPaginationResponseDto<ProductResponseDto> toPaginationDto(
+            List<ProductEntity> products,
+            Page<ProductEntity> productPage
+    ) {
+        // Convert entities to DTOs
+        List<ProductResponseDto> productDtos = products.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
 
-        ImageResponseDto dto = new ImageResponseDto();
-        dto.setId(image.getId());
-        dto.setUrl("/api/v1/images/" + image.getId());
-        return dto;
+        // Create pagination response
+        CustomPaginationResponseDto<ProductResponseDto> response = new CustomPaginationResponseDto<>();
+        response.setContent(productDtos);
+        response.setPageNo(productPage.getNumber() + 1);
+        response.setPageSize(productPage.getSize());
+        response.setTotalElements(productPage.getTotalElements());
+        response.setTotalPages(productPage.getTotalPages());
+        response.setLast(productPage.isLast());
+
+        return response;
     }
 
-    // Helper method to map multiple images without accessing base64 content
-    protected List<ImageResponseDto> mapImagesWithoutBase64(List<ImageEntity> images) {
-        if (images == null || images.isEmpty()) return new ArrayList<>();
+    // Helper methods for mapping with null safety
+    protected Double getProductFinalPrice(ProductEntity product) {
+        return product != null ? product.getFinalPrice() : null;
+    }
 
+    protected String getProductPromotionStatus(ProductEntity product) {
+        return product != null && product.getPromotionStatus() != null
+                ? product.getPromotionStatus().name()
+                : null;
+    }
+
+    @Named("mapProductMainImage")
+    protected ImageResponseDto mapProductMainImage(ImageEntity image) {
+        return imageMapper.toDto(image);
+    }
+
+    @Named("mapProductAdditionalImages")
+    protected List<ImageResponseDto> mapProductAdditionalImages(List<ImageEntity> images) {
+        if (images == null) return null;
         return images.stream()
-                .filter(Objects::nonNull)
-                .filter(img -> img.getId() != null)
-                .map(this::mapImageWithoutBase64)
+                .map(imageMapper::toDto)
                 .collect(Collectors.toList());
     }
 
-    // Helper method to map sizes without accessing base64 content in their images
-    protected List<ProductSizeResponseDto> mapSizesWithoutBase64(List<ProductSizeEntity> sizes) {
-        if (sizes == null || sizes.isEmpty()) return new ArrayList<>();
-
+    @Named("mapProductSizes")
+    protected List<ProductSizeResponseDto> mapProductSizes(List<ProductSizeEntity> sizes) {
+        if (sizes == null) return null;
         return sizes.stream()
-                .filter(Objects::nonNull)
-                .map(size -> {
-                    ProductSizeResponseDto dto = new ProductSizeResponseDto();
-                    dto.setId(size.getId());
-                    dto.setSize(size.getSize());
-                    dto.setPrice(size.getPrice());
-                    dto.setFinalPrice(size.getFinalPrice());
-                    dto.setPromotionStatus(size.getPromotionStatus().name());
-                    dto.setDiscountType(size.getDiscountType());
-                    dto.setDiscountValue(size.getDiscountValue());
-                    dto.setDiscountStartDate(size.getDiscountStartDate());
-                    dto.setDiscountEndDate(size.getDiscountEndDate());
-                    dto.setStatus(size.getStatus());
-                    dto.setProductId(size.getProduct().getId());
-                    dto.setMainImage(mapImageWithoutBase64(size.getMainImage()));
-                    dto.setAdditionalImages(mapImagesWithoutBase64(size.getAdditionalImages()));
-                    return dto;
-                })
+                .map(this::mapProductSize)
                 .collect(Collectors.toList());
     }
 
-    @Mapping(source = "product.id", target = "productId")
-    @Mapping(target = "finalPrice", expression = "java(size.getFinalPrice())")
-    @Mapping(target = "promotionStatus", expression = "java(size.getPromotionStatus().name())")
-    @Mapping(target = "mainImage", expression = "java(mapImageWithoutBase64(size.getMainImage()))")
-    @Mapping(target = "additionalImages", expression = "java(mapImagesWithoutBase64(size.getAdditionalImages()))")
-    public abstract ProductSizeResponseDto toSizeDto(ProductSizeEntity size);
+    // Detailed mapping for individual product size
+    protected ProductSizeResponseDto mapProductSize(ProductSizeEntity size) {
+        if (size == null) return null;
 
+        ProductSizeResponseDto sizeDto = new ProductSizeResponseDto();
+        sizeDto.setId(size.getId());
+        sizeDto.setSize(size.getSize());
+        sizeDto.setPrice(size.getPrice());
+        sizeDto.setFinalPrice(size.getFinalPrice());
+        sizeDto.setPromotionStatus(size.getPromotionStatus() != null
+                ? size.getPromotionStatus().name()
+                : null);
+        sizeDto.setDiscountType(size.getDiscountType());
+        sizeDto.setDiscountValue(size.getDiscountValue());
+        sizeDto.setDiscountStartDate(size.getDiscountStartDate());
+        sizeDto.setDiscountEndDate(size.getDiscountEndDate());
+        sizeDto.setStatus(size.getStatus());
+        sizeDto.setProductId(size.getProduct() != null ? size.getProduct().getId() : null);
+
+        // Map size main image
+        sizeDto.setMainImage(imageMapper.toDto(size.getMainImage()));
+
+        // Map size additional images
+        if (size.getAdditionalImages() != null) {
+            sizeDto.setAdditionalImages(
+                    size.getAdditionalImages().stream()
+                            .map(imageMapper::toDto)
+                            .collect(Collectors.toList())
+            );
+        }
+
+        return sizeDto;
+    }
+
+    // Entity to DTO mappings
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "shop", ignore = true)
     @Mapping(target = "mainImage", source = "image")
@@ -97,6 +133,7 @@ public abstract class ProductMapper {
     @Mapping(target = "additionalImages", ignore = true)
     public abstract ProductSizeEntity toSizeEntity(ProductSizeRequestDto sizeRequestDto);
 
+    // Update methods with null value property mapping strategy
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "mainImage.referenceType", constant = "product")
     @Mapping(target = "additionalImages", ignore = true)
@@ -107,7 +144,7 @@ public abstract class ProductMapper {
     @Mapping(target = "additionalImages", ignore = true)
     public abstract void updateSizeFromDto(ProductSizeRequestDto dto, @MappingTarget ProductSizeEntity entity);
 
-    // Method to update or add images for a product
+    // Image update methods
     public void updateProductImages(ProductEntity product, List<ImageEntity> images) {
         // Clear existing images
         if (product.getAdditionalImages() != null) {
