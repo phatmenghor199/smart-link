@@ -25,14 +25,14 @@ public abstract class ProductMapper {
     @Mapping(target = "finalPrice", expression = "java(product.getFinalPrice())")
     @Mapping(target = "promotionStatus", expression = "java(product.getPromotionStatus().name())")
     @Mapping(target = "mainImage", source = "mainImage")
-    @Mapping(target = "additionalImages", expression = "java(mapAdditionalImages(product))")
+    @Mapping(target = "additionalImages", expression = "java(mapImages(product))")
     public abstract ProductResponseDto toDto(ProductEntity product);
 
     @Mapping(source = "product.id", target = "productId")
     @Mapping(target = "finalPrice", expression = "java(size.getFinalPrice())")
     @Mapping(target = "promotionStatus", expression = "java(size.getPromotionStatus().name())")
     @Mapping(target = "mainImage", source = "mainImage")
-    @Mapping(target = "additionalImages", expression = "java(mapAdditionalImagesForSize(size))")
+    @Mapping(target = "additionalImages", expression = "java(mapSizeImages(size))")
     public abstract ProductSizeResponseDto toSizeDto(ProductSizeEntity size);
 
     @Mapping(target = "category", ignore = true)
@@ -56,9 +56,9 @@ public abstract class ProductMapper {
     @Mapping(target = "additionalImages", ignore = true)
     public abstract void updateSizeFromDto(ProductSizeRequestDto dto, @MappingTarget ProductSizeEntity entity);
 
-    // Helper method to map additional images for products
-    protected List<com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto> mapAdditionalImages(ProductEntity product) {
-        if (product.getAdditionalImages() == null) {
+    // Helper method to map images for products
+    protected List<com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto> mapImages(ProductEntity product) {
+        if (product.getAdditionalImages() == null || product.getAdditionalImages().isEmpty()) {
             return null;
         }
         return product.getAdditionalImages().stream()
@@ -66,9 +66,9 @@ public abstract class ProductMapper {
                 .collect(Collectors.toList());
     }
 
-    // Helper method to map additional images for product sizes
-    protected List<com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto> mapAdditionalImagesForSize(ProductSizeEntity size) {
-        if (size.getAdditionalImages() == null) {
+    // Helper method to map images for product sizes
+    protected List<com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto> mapSizeImages(ProductSizeEntity size) {
+        if (size.getAdditionalImages() == null || size.getAdditionalImages().isEmpty()) {
             return null;
         }
         return size.getAdditionalImages().stream()
@@ -76,29 +76,35 @@ public abstract class ProductMapper {
                 .collect(Collectors.toList());
     }
 
-    // Method to update or add additional images for a product
-    public void updateProductAdditionalImages(ProductEntity product, List<ImageEntity> additionalImages) {
-        // Clear existing additional images
+    // Method to update or add images for a product
+    public void updateProductImages(ProductEntity product, List<ImageEntity> images) {
+        // Clear existing images
         if (product.getAdditionalImages() != null) {
             product.getAdditionalImages().clear();
         }
 
-        // Add new additional images
-        if (additionalImages != null) {
-            additionalImages.forEach(product::addAdditionalImage);
+        // Add new images
+        if (images != null && !images.isEmpty()) {
+            images.forEach(image -> {
+                image.setReferenceType("product");
+                product.addAdditionalImage(image);
+            });
         }
     }
 
-    // Method to update or add additional images for a product size
-    public void updateProductSizeAdditionalImages(ProductSizeEntity size, List<ImageEntity> additionalImages) {
-        // Clear existing additional images
+    // Method to update or add images for a product size
+    public void updateProductSizeImages(ProductSizeEntity size, List<ImageEntity> images) {
+        // Clear existing images
         if (size.getAdditionalImages() != null) {
             size.getAdditionalImages().clear();
         }
 
-        // Add new additional images
-        if (additionalImages != null) {
-            additionalImages.forEach(size::addAdditionalImage);
+        // Add new images
+        if (images != null && !images.isEmpty()) {
+            images.forEach(image -> {
+                image.setReferenceType("product_size");
+                size.addAdditionalImage(image);
+            });
         }
     }
 }

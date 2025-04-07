@@ -17,6 +17,16 @@ public interface ProductService {
     // Get products with pagination and filtering
     CustomPaginationResponseDto<ProductResponseDto> getProductsByShopWithFilter(ProductFilterDto filterDto);
 
+    // Get simple list of products by shop
+    List<ProductResponseDto> getProductsByShop();
+
+    // Get products by category
+    List<ProductResponseDto> getProductsByCategory(Long categoryId);
+    CustomPaginationResponseDto<ProductResponseDto> getProductsByCategoryWithFilter(Long categoryId, ProductFilterDto filterDto);
+
+    // Get products by id
+    ProductResponseDto getProductById(Long id);
+
     // Get all products (usually for admin)
     List<ProductResponseDto> getAllProducts();
     CustomPaginationResponseDto<ProductResponseDto> getAllProductsWithFilter(ProductFilterDto filterDto);
@@ -28,10 +38,8 @@ public interface ProductService {
     // Delete methods
     ProductResponseDto deleteProduct(Long id);
 
-    // Product size status toggle
+    // Toggle status methods
     ProductResponseDto toggleProductSizeStatus(Long productId, Long sizeId);
-
-    // Product status toggle
     ProductResponseDto toggleProductStatus(Long productId);
 
     // Discount related methods
@@ -45,10 +53,9 @@ public interface ProductService {
     List<ProductResponseDto> getProductsWithActivePromotionsByShop();
     CustomPaginationResponseDto<ProductResponseDto> getProductsWithActivePromotionsByShopWithFilter(ProductFilterDto filterDto);
 
-    // New image-related methods
-    ProductResponseDto addAdditionalImagesToProduct(Long productId, List<ImageEntity> images);
-    ProductResponseDto removeAdditionalImageFromProduct(Long productId, Long imageId);
-
-    ProductResponseDto addAdditionalImagesToProductSize(Long productId, Long sizeId, List<ImageEntity> images);
-    ProductResponseDto removeAdditionalImageFromProductSize(Long productId, Long sizeId, Long imageId);
+    // Image management methods
+    ProductResponseDto addImagesToProduct(Long productId, List<ImageEntity> images);
+    ProductResponseDto removeImageFromProduct(Long productId, String imageId);
+    ProductResponseDto addImagesToProductSize(Long productId, Long sizeId, List<ImageEntity> images);
+    ProductResponseDto removeImageFromProductSize(Long productId, Long sizeId, String imageId);
 }

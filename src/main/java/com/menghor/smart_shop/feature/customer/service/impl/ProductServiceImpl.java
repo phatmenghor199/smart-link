@@ -18,6 +18,7 @@ import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
 import com.menghor.smart_shop.feature.customer.specification.ProductSpecification;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;
+import com.menghor.smart_shop.feature.setting.repository.ImageRepository;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
 import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
@@ -32,7 +33,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final ProductSizeRepository productSizeRepository;
+    private final ImageRepository imageRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -69,48 +70,87 @@ public class ProductServiceImpl implements ProductService {
             product.setStatus(StatusData.ACTIVE);
         }
 
-        // Set image reference type if image is provided
-        if (product.getImage() != null) {
-            product.getImage().setReferenceType("product");
-            log.info("Setting referenceType to 'product' for new image");
+        // Set image reference type if main image is provided
+        if (product.getMainImage() != null) {
+            product.getMainImage().setReferenceType("product");
+            log.info("Setting referenceType to 'product' for main image");
         }
 
-        ProductEntity productEntity = productRepository.saveAndFlush(product);
+        ProductEntity savedProduct = productRepository.save(product);
 
+        // Handle additional images if provided
+        if (requestDto.getAdditionalImages() != null && !requestDto.getAdditionalImages().isEmpty()) {
+            List<ImageEntity> additionalImages = requestDto.getAdditionalImages().stream()
+                    .map(imageDto -> {
+                        ImageEntity image = new ImageEntity();
+                        image.setBase64Image(imageDto.getBase64Image());
+                        image.setImageType(imageDto.getImageType());
+                        image.setReferenceType("product");
+                        return imageRepository.save(image);
+                    })
+                    .collect(Collectors.toList());
+
+            productMapper.updateProductImages(savedProduct, additionalImages);
+        }
+
+        // Handle product sizes
         if (requestDto.getSizes() != null && !requestDto.getSizes().isEmpty()) {
             List<ProductSizeEntity> sizes = requestDto.getSizes().stream()
                     .map(sizeRequestDto -> {
                         ProductSizeEntity size = productMapper.toSizeEntity(sizeRequestDto);
-                        size.setProduct(productEntity); // Ensure the relationship is set
-                        size.validateDiscount(); // Validate the discount
+                        size.setProduct(savedProduct);
+                        size.validateDiscount();
 
                         // Set default status if not provided
                         if (size.getStatus() == null) {
                             size.setStatus(StatusData.ACTIVE);
                         }
 
-                        productSizeRepository.save(size); // Save each size
-                        return size;
-                    })
-                    .toList();
+                        // Set main image for size
+                        if (size.getMainImage() != null) {
+                            size.getMainImage().setReferenceType("product_size");
+                        }
 
-            productEntity.setSizes(sizes);
+                        ProductSizeEntity savedSize = productSizeRepository.save(size);
+
+                        // Handle additional images for size if provided
+                        if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
+                            List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
+                                    .map(imageDto -> {
+                                        ImageEntity image = new ImageEntity();
+                                        image.setBase64Image(imageDto.getBase64Image());
+                                        image.setImageType(imageDto.getImageType());
+                                        image.setReferenceType("product_size");
+                                        return imageRepository.save(image);
+                                    })
+                                    .collect(Collectors.toList());
+
+                            productMapper.updateProductSizeImages(savedSize, sizeImages);
+                            productSizeRepository.save(savedSize);
+                        }
+
+                        return savedSize;
+                    })
+                    .collect(Collectors.toList());
+
+            savedProduct.setSizes(sizes);
 
             // Clear product promotion details if it has sizes
-            if (!productEntity.getSizes().isEmpty()) {
+            if (!savedProduct.getSizes().isEmpty()) {
                 log.info("Clearing promotion details for product with sizes");
-                productEntity.resetDiscount();
+                savedProduct.resetDiscount();
             }
         }
 
-        // Save the product again to persist the changes with sizes
-        ProductEntity savedProduct = productRepository.save(productEntity);
+        // Save the product again to persist all changes
+        ProductEntity finalProduct = productRepository.save(savedProduct);
 
         log.info("Product created successfully in shop {}", shopId);
-        return productMapper.toDto(savedProduct);
+        return productMapper.toDto(finalProduct);
     }
 
     @Override
+    @Transactional
     public ProductResponseDto addSizesToProduct(Long productId, List<ProductSizeRequestDto> sizeRequest) {
         log.info("Adding sizes to product with ID {}", productId);
         ProductEntity product = productRepository.findById(productId)
@@ -126,7 +166,7 @@ public class ProductServiceImpl implements ProductService {
         List<ProductSizeEntity> sizes = sizeRequest.stream()
                 .map(sizeRequestDto -> {
                     ProductSizeEntity size = productMapper.toSizeEntity(sizeRequestDto);
-                    size.setProduct(product); // Ensure the relationship is set
+                    size.setProduct(product);
                     size.validateDiscount();
 
                     // Set default status if not provided
@@ -134,7 +174,30 @@ public class ProductServiceImpl implements ProductService {
                         size.setStatus(StatusData.ACTIVE);
                     }
 
-                    return productSizeRepository.save(size);
+                    // Set main image reference type
+                    if (size.getMainImage() != null) {
+                        size.getMainImage().setReferenceType("product_size");
+                    }
+
+                    ProductSizeEntity savedSize = productSizeRepository.save(size);
+
+                    // Handle additional images for size if provided
+                    if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
+                        List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
+                                .map(imageDto -> {
+                                    ImageEntity image = new ImageEntity();
+                                    image.setBase64Image(imageDto.getBase64Image());
+                                    image.setImageType(imageDto.getImageType());
+                                    image.setReferenceType("product_size");
+                                    return imageRepository.save(image);
+                                })
+                                .collect(Collectors.toList());
+
+                        productMapper.updateProductSizeImages(savedSize, sizeImages);
+                        productSizeRepository.save(savedSize);
+                    }
+
+                    return savedSize;
                 })
                 .toList();
 
@@ -142,13 +205,13 @@ public class ProductServiceImpl implements ProductService {
 
         // Clear product promotion details if it has sizes
         if (!product.getSizes().isEmpty()) {
-            log.info("Clearing promotion details for product with sizes");
+            log.info("Clearing promotions details for product with sizes");
             product.resetDiscount();
         }
 
-        productRepository.save(product);
+        ProductEntity updatedProduct = productRepository.save(product);
         log.info("Sizes added successfully to product {}", productId);
-        return productMapper.toDto(product);
+        return productMapper.toDto(updatedProduct);
     }
 
     @Override
@@ -376,32 +439,41 @@ public class ProductServiceImpl implements ProductService {
             product.setCategory(category);
         }
 
-        // Handle image update
+        // Handle main image update
         if (requestDto.getImage() != null) {
-            if (product.getImage() == null) {
+            if (product.getMainImage() == null) {
                 // Create new image if none exists
                 ImageEntity newImage = new ImageEntity();
                 newImage.setImageType(requestDto.getImage().getImageType());
                 newImage.setBase64Image(requestDto.getImage().getBase64Image());
                 newImage.setReferenceType("product");
-                product.setImage(newImage);
-                log.info("Created new image with referenceType: product");
+                product.setMainImage(newImage);
+                log.info("Created new main image for product");
             } else {
-                // Update existing image instead of replacing it
-                product.getImage().setImageType(requestDto.getImage().getImageType());
-                product.getImage().setBase64Image(requestDto.getImage().getBase64Image());
-                product.getImage().setReferenceType("product"); // Explicitly set referenceType again
-                log.info("Updated existing image and set referenceType: product");
+                // Update existing image
+                product.getMainImage().setImageType(requestDto.getImage().getImageType());
+                product.getMainImage().setBase64Image(requestDto.getImage().getBase64Image());
+                product.getMainImage().setReferenceType("product");
+                log.info("Updated existing main image for product");
             }
         }
 
         // Update product fields
         productMapper.updateProductFromDto(requestDto, product);
 
-        // IMPORTANT FIX: Re-set the referenceType AFTER the mapper update
-        if (product.getImage() != null) {
-            product.getImage().setReferenceType("product");
-            log.info("Re-applying referenceType 'product' after mapper update");
+        // Handle additional images if provided
+        if (requestDto.getAdditionalImages() != null && !requestDto.getAdditionalImages().isEmpty()) {
+            List<ImageEntity> additionalImages = requestDto.getAdditionalImages().stream()
+                    .map(imageDto -> {
+                        ImageEntity image = new ImageEntity();
+                        image.setBase64Image(imageDto.getBase64Image());
+                        image.setImageType(imageDto.getImageType());
+                        image.setReferenceType("product");
+                        return imageRepository.save(image);
+                    })
+                    .collect(Collectors.toList());
+
+            productMapper.updateProductImages(product, additionalImages);
         }
 
         // Save product changes
@@ -423,8 +495,41 @@ public class ProductServiceImpl implements ProductService {
                                         sizeRequestDto.getId(), id));
                     }
 
+                    // Update size data
                     productMapper.updateSizeFromDto(sizeRequestDto, size);
                     size.validateDiscount();
+
+                    // Handle size main image
+                    if (sizeRequestDto.getImage() != null) {
+                        if (size.getMainImage() == null) {
+                            ImageEntity newImage = new ImageEntity();
+                            newImage.setImageType(sizeRequestDto.getImage().getImageType());
+                            newImage.setBase64Image(sizeRequestDto.getImage().getBase64Image());
+                            newImage.setReferenceType("product_size");
+                            size.setMainImage(newImage);
+                        } else {
+                            // Update existing image
+                            size.getMainImage().setImageType(sizeRequestDto.getImage().getImageType());
+                            size.getMainImage().setBase64Image(sizeRequestDto.getImage().getBase64Image());
+                            size.getMainImage().setReferenceType("product_size");
+                        }
+                    }
+
+                    // Handle additional images for size
+                    if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
+                        List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
+                                .map(imageDto -> {
+                                    ImageEntity image = new ImageEntity();
+                                    image.setBase64Image(imageDto.getBase64Image());
+                                    image.setImageType(imageDto.getImageType());
+                                    image.setReferenceType("product_size");
+                                    return imageRepository.save(image);
+                                })
+                                .collect(Collectors.toList());
+
+                        productMapper.updateProductSizeImages(size, sizeImages);
+                    }
+
                     productSizeRepository.save(size);
                 } else {
                     // Add new size
@@ -437,8 +542,30 @@ public class ProductServiceImpl implements ProductService {
                         newSize.setStatus(StatusData.ACTIVE);
                     }
 
-                    productSizeRepository.save(newSize);
-                    updatedProduct.getSizes().add(newSize);
+                    // Handle main image
+                    if (newSize.getMainImage() != null) {
+                        newSize.getMainImage().setReferenceType("product_size");
+                    }
+
+                    ProductSizeEntity savedSize = productSizeRepository.save(newSize);
+
+                    // Handle additional images for size
+                    if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
+                        List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
+                                .map(imageDto -> {
+                                    ImageEntity image = new ImageEntity();
+                                    image.setBase64Image(imageDto.getBase64Image());
+                                    image.setImageType(imageDto.getImageType());
+                                    image.setReferenceType("product_size");
+                                    return imageRepository.save(image);
+                                })
+                                .collect(Collectors.toList());
+
+                        productMapper.updateProductSizeImages(savedSize, sizeImages);
+                        productSizeRepository.save(savedSize);
+                    }
+
+                    updatedProduct.getSizes().add(savedSize);
                 }
             }
 
@@ -481,6 +608,39 @@ public class ProductServiceImpl implements ProductService {
 
         // Update size fields
         productMapper.updateSizeFromDto(sizeRequestDto, size);
+
+        // Handle main image update
+        if (sizeRequestDto.getImage() != null) {
+            if (size.getMainImage() == null) {
+                // Create new image if none exists
+                ImageEntity newImage = new ImageEntity();
+                newImage.setImageType(sizeRequestDto.getImage().getImageType());
+                newImage.setBase64Image(sizeRequestDto.getImage().getBase64Image());
+                newImage.setReferenceType("product_size");
+                size.setMainImage(newImage);
+            } else {
+                // Update existing image
+                size.getMainImage().setImageType(sizeRequestDto.getImage().getImageType());
+                size.getMainImage().setBase64Image(sizeRequestDto.getImage().getBase64Image());
+                size.getMainImage().setReferenceType("product_size");
+            }
+        }
+
+        // Handle additional images update
+        if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
+            List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
+                    .map(imageDto -> {
+                        ImageEntity image = new ImageEntity();
+                        image.setBase64Image(imageDto.getBase64Image());
+                        image.setImageType(imageDto.getImageType());
+                        image.setReferenceType("product_size");
+                        return imageRepository.save(image);
+                    })
+                    .collect(Collectors.toList());
+
+            productMapper.updateProductSizeImages(size, sizeImages);
+        }
+
         size.validateDiscount();
         productSizeRepository.save(size);
 
@@ -798,6 +958,146 @@ public class ProductServiceImpl implements ProductService {
         response.setLast(productPage.isLast());
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto addImagesToProduct(Long productId, List<ImageEntity> images) {
+        log.info("Adding images to product with ID {}", productId);
+
+        // Get current shop ID
+        Long shopId = securityUtils.getShopIdFromToken();
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Check if product belongs to current shop
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Set reference type for all images
+        images.forEach(image -> image.setReferenceType("product"));
+
+        // Save all images
+        List<ImageEntity> savedImages = images.stream()
+                .map(imageRepository::save)
+                .toList();
+
+        // Add images to product
+        savedImages.forEach(product::addAdditionalImage);
+
+        // Save product with new images
+        ProductEntity updatedProduct = productRepository.save(product);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto removeImageFromProduct(Long productId, String imageId) {
+        log.info("Removing image with ID {} from product with ID {}", imageId, productId);
+
+        // Get current shop ID
+        Long shopId = securityUtils.getShopIdFromToken();
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Check if product belongs to current shop
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Remove image from product by ID
+        product.getAdditionalImages().removeIf(image -> image.getId().toString().equals(imageId));
+
+        // Save product
+        ProductEntity updatedProduct = productRepository.save(product);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto addImagesToProductSize(Long productId, Long sizeId, List<ImageEntity> images) {
+        log.info("Adding images to size with ID {} of product with ID {}", sizeId, productId);
+
+        // Get current shop ID
+        Long shopId = securityUtils.getShopIdFromToken();
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Check if product belongs to current shop
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size
+        ProductSizeEntity size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Ensure the size belongs to this product
+        if (!size.getProduct().getId().equals(productId)) {
+            throw new NotFoundException(
+                    String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
+        }
+
+        // Set reference type for all images
+        images.forEach(image -> image.setReferenceType("product_size"));
+
+        // Save all images
+        List<ImageEntity> savedImages = images.stream()
+                .map(imageRepository::save)
+                .toList();
+
+        // Add images to size
+        savedImages.forEach(size::addAdditionalImage);
+
+        // Save size with new images
+        productSizeRepository.save(size);
+
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto removeImageFromProductSize(Long productId, Long sizeId, String imageId) {
+        log.info("Removing image with ID {} from size with ID {} of product with ID {}", imageId, sizeId, productId);
+
+        // Get current shop ID
+        Long shopId = securityUtils.getShopIdFromToken();
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Check if product belongs to current shop
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size
+        ProductSizeEntity size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Ensure the size belongs to this product
+        if (!size.getProduct().getId().equals(productId)) {
+            throw new NotFoundException(
+                    String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
+        }
+
+        // Remove image from size by ID
+        size.getAdditionalImages().removeIf(image -> image.getId().toString().equals(imageId));
+
+        // Save size
+        productSizeRepository.save(size);
+
+        return productMapper.toDto(product);
     }
 
     /**

@@ -48,8 +48,8 @@ public class ProductEntity extends BaseEntity {
     @JoinColumn(name = "shop_id", nullable = false)
     private ShopEntity shop; // Each product belongs to a shop
 
-    @OneToMany(mappedBy = "product")
-    private List<ProductSizeEntity> sizes;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductSizeEntity> sizes = new ArrayList<>();
 
     // Main product image (single image)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)

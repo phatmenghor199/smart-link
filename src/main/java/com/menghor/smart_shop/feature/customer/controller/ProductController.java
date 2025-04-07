@@ -11,8 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -249,5 +249,77 @@ public class ProductController {
         CustomPaginationResponseDto<ProductResponseDto> products =
                 productService.getProductsWithActivePromotionsByShopWithFilter(filterDto);
         return new ApiResponse<>("Success", "Products with active promotions retrieved", products);
+    }
+
+    /**
+     * Add images to a product
+     */
+    @PostMapping("/{productId}/images")
+    public ApiResponse<ProductResponseDto> addImagesToProduct(
+            @PathVariable Long productId,
+            @RequestBody List<com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto> imageRequestDtos) {
+        log.info("Adding images to product with ID: {}", productId);
+
+        // Convert ImageRequestDto to ImageEntity
+        List<com.menghor.smart_shop.feature.setting.model.ImageEntity> images = imageRequestDtos.stream()
+                .map(imageDto -> {
+                    com.menghor.smart_shop.feature.setting.model.ImageEntity image = new com.menghor.smart_shop.feature.setting.model.ImageEntity();
+                    image.setBase64Image(imageDto.getBase64Image());
+                    image.setImageType(imageDto.getImageType());
+                    return image;
+                })
+                .toList();
+
+        ProductResponseDto product = productService.addImagesToProduct(productId, images);
+        return new ApiResponse<>("Success", "Images added successfully", product);
+    }
+
+    /**
+     * Remove image from a product
+     */
+    @DeleteMapping("/{productId}/images/{imageId}")
+    public ApiResponse<ProductResponseDto> removeImageFromProduct(
+            @PathVariable Long productId,
+            @PathVariable String imageId) {
+        log.info("Removing image with ID: {} from product with ID: {}", imageId, productId);
+        ProductResponseDto product = productService.removeImageFromProduct(productId, imageId);
+        return new ApiResponse<>("Success", "Image removed successfully", product);
+    }
+
+    /**
+     * Add images to a product size
+     */
+    @PostMapping("/{productId}/sizes/{sizeId}/images")
+    public ApiResponse<ProductResponseDto> addImagesToProductSize(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @RequestBody List<com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto> imageRequestDtos) {
+        log.info("Adding images to size with ID: {} of product with ID: {}", sizeId, productId);
+
+        // Convert ImageRequestDto to ImageEntity
+        List<com.menghor.smart_shop.feature.setting.model.ImageEntity> images = imageRequestDtos.stream()
+                .map(imageDto -> {
+                    com.menghor.smart_shop.feature.setting.model.ImageEntity image = new com.menghor.smart_shop.feature.setting.model.ImageEntity();
+                    image.setBase64Image(imageDto.getBase64Image());
+                    image.setImageType(imageDto.getImageType());
+                    return image;
+                })
+                .toList();
+
+        ProductResponseDto product = productService.addImagesToProductSize(productId, sizeId, images);
+        return new ApiResponse<>("Success", "Images added successfully", product);
+    }
+
+    /**
+     * Remove image from a product size
+     */
+    @DeleteMapping("/{productId}/sizes/{sizeId}/images/{imageId}")
+    public ApiResponse<ProductResponseDto> removeImageFromProductSize(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @PathVariable String imageId) {
+        log.info("Removing image with ID: {} from size with ID: {} of product with ID: {}", imageId, sizeId, productId);
+        ProductResponseDto product = productService.removeImageFromProductSize(productId, sizeId, imageId);
+        return new ApiResponse<>("Success", "Image removed successfully", product);
     }
 }
