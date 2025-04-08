@@ -2,6 +2,7 @@ package com.menghor.smart_shop.feature.customer.repository;
 
 import com.menghor.smart_shop.enumations.StatusData;
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
+import com.menghor.smart_shop.feature.customer.models.ProductSizeEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,30 +16,5 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<ProductEntity, Long>, JpaSpecificationExecutor<ProductEntity> {
-    // Basic queries
-    List<ProductEntity> findByShopIdAndStatus(Long shopId, StatusData status);
-    List<ProductEntity> findByCategoryIdAndStatus(Long categoryId, StatusData status);
-
-    // Expired discounts
     List<ProductEntity> findByDiscountEndDateBefore(LocalDate now);
-
-    // Active promotions
-    @Query("SELECT p FROM ProductEntity p WHERE " +
-            "(p.discountStartDate IS NOT NULL AND p.discountEndDate IS NOT NULL AND " +
-            "CURRENT_DATE BETWEEN p.discountStartDate AND p.discountEndDate) " +
-            "OR EXISTS (SELECT ps FROM ProductSizeEntity ps WHERE ps.product = p AND " +
-            "(ps.discountStartDate IS NOT NULL AND ps.discountEndDate IS NOT NULL AND " +
-            "CURRENT_DATE BETWEEN ps.discountStartDate AND ps.discountEndDate))")
-    List<ProductEntity> findAllWithActivePromotions();
-
-    // Active promotions by shop
-    @Query("SELECT p FROM ProductEntity p WHERE " +
-            "p.shop.id = :shopId AND (" +
-            "(p.discountStartDate IS NOT NULL AND p.discountEndDate IS NOT NULL AND " +
-            "CURRENT_DATE BETWEEN p.discountStartDate AND p.discountEndDate) " +
-            "OR EXISTS (SELECT ps FROM ProductSizeEntity ps WHERE ps.product = p AND " +
-            "(ps.discountStartDate IS NOT NULL AND ps.discountEndDate IS NOT NULL AND " +
-            "CURRENT_DATE BETWEEN ps.discountStartDate AND ps.discountEndDate)))")
-    List<ProductEntity> findAllWithActivePromotionsByShopId(Long shopId);
-
 }

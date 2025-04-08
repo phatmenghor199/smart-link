@@ -7,6 +7,7 @@ import com.menghor.smart_shop.feature.customer.dto.request.ProductFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
+import com.menghor.smart_shop.feature.customer.dto.resposne.ProductSizeResponseDto;
 import com.menghor.smart_shop.feature.customer.mapper.ProductMapper;
 import com.menghor.smart_shop.feature.customer.models.CategoryEntity;
 import com.menghor.smart_shop.feature.customer.models.ProductEntity;
@@ -16,12 +17,16 @@ import com.menghor.smart_shop.feature.customer.repository.ProductRepository;
 import com.menghor.smart_shop.feature.customer.repository.ProductSizeRepository;
 import com.menghor.smart_shop.feature.customer.repository.ShopRepository;
 import com.menghor.smart_shop.feature.customer.specification.ProductSpecification;
+import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
+import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;
 import com.menghor.smart_shop.feature.setting.repository.ImageRepository;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import com.menghor.smart_shop.utils.database.SecurityUtils;
 import com.menghor.smart_shop.utils.pagiantion.PaginationUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +53,9 @@ public class ProductServiceImpl implements ProductService {
     private final ImageRepository imageRepository;
     private final ProductMapper productMapper;
 
-    @Override
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Transactional
     public ProductResponseDto createProduct(ProductRequestDto requestDto) {
         Long userId = securityUtils.getUserIdFromToken();
@@ -58,94 +65,114 @@ public class ProductServiceImpl implements ProductService {
         // Find and validate category
         CategoryEntity category = getUserOwnedCategory(requestDto.getCategoryId(), shopId);
 
-        // Convert DTO to entity
-        ProductEntity product = productMapper.toEntity(requestDto);
+        // Create a fresh product entity
+        ProductEntity product = new ProductEntity();
+        product.setName(requestDto.getName());
+        product.setDescription(requestDto.getDescription());
         product.setShop(shopRepository.findById(shopId)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.SHOP_NOT_FOUND, shopId))));
         product.setCategory(category);
+        product.setStatus(requestDto.getStatus() != null ? requestDto.getStatus() : StatusData.ACTIVE);
 
-        // Set default status if not provided
-        if (product.getStatus() == null) {
-            product.setStatus(StatusData.ACTIVE);
+        // Check if product has sizes
+        boolean hasSizes = requestDto.getSizes() != null && !requestDto.getSizes().isEmpty();
+
+        // Set price and product-level details only if product doesn't have sizes
+        if (!hasSizes) {
+            product.setPrice(requestDto.getPrice());
+            product.setDiscountType(requestDto.getDiscountType());
+            product.setDiscountValue(requestDto.getDiscountValue());
+            product.setDiscountStartDate(requestDto.getDiscountStartDate());
+            product.setDiscountEndDate(requestDto.getDiscountEndDate());
+
+            // Handle main image
+            if (requestDto.getImage() != null) {
+                ImageEntity mainImage = new ImageEntity();
+                mainImage.setBase64Image(requestDto.getImage().getBase64Image());
+                mainImage.setImageType(requestDto.getImage().getImageType());
+                mainImage.setReferenceType("product");
+                mainImage = imageRepository.save(mainImage);
+                product.setMainImage(mainImage);
+            }
+
+            // Handle additional images
+            if (requestDto.getAdditionalImages() != null && !requestDto.getAdditionalImages().isEmpty()) {
+                List<ImageEntity> additionalImages = new ArrayList<>();
+                for (ImageRequestDto imageDto : requestDto.getAdditionalImages()) {
+                    ImageEntity image = new ImageEntity();
+                    image.setBase64Image(imageDto.getBase64Image());
+                    image.setImageType(imageDto.getImageType());
+                    image.setReferenceType("product");
+                    additionalImages.add(imageRepository.save(image));
+                }
+                product.setAdditionalImages(additionalImages);
+            }
+        } else {
+            // If product has sizes, just set a reference price from the first size
+            ProductSizeRequestDto firstSize = requestDto.getSizes().get(0);
+            product.setPrice(firstSize.getPrice() != null ? firstSize.getPrice() : 0.0);
         }
 
-        // Handle main image
-        if (product.getMainImage() != null) {
-            product.getMainImage().setReferenceType("product");
-        }
-
-        // Save initial product first
+        // Save initial product to get ID
         ProductEntity savedProduct = productRepository.saveAndFlush(product);
+        log.info("Initial product saved with ID: {}", savedProduct.getId());
 
-        // Handle additional images
-        if (requestDto.getAdditionalImages() != null && !requestDto.getAdditionalImages().isEmpty()) {
-            List<ImageEntity> additionalImages = requestDto.getAdditionalImages().stream()
-                    .map(imageDto -> {
+        // Handle product sizes if present
+        List<ProductSizeEntity> savedSizes = new ArrayList<>();
+        if (hasSizes) {
+            for (ProductSizeRequestDto sizeDto : requestDto.getSizes()) {
+                ProductSizeEntity size = new ProductSizeEntity();
+                size.setSize(sizeDto.getSize());
+                size.setPrice(sizeDto.getPrice());
+                size.setStatus(sizeDto.getStatus() != null ? sizeDto.getStatus() : StatusData.ACTIVE);
+                size.setDiscountType(sizeDto.getDiscountType());
+                size.setDiscountValue(sizeDto.getDiscountValue());
+                size.setDiscountStartDate(sizeDto.getDiscountStartDate());
+                size.setDiscountEndDate(sizeDto.getDiscountEndDate());
+
+                // IMPORTANT: Set the product reference before saving
+                size.setProduct(savedProduct);
+
+                // Handle main image for size
+                if (sizeDto.getImage() != null) {
+                    ImageEntity mainImage = new ImageEntity();
+                    mainImage.setBase64Image(sizeDto.getImage().getBase64Image());
+                    mainImage.setImageType(sizeDto.getImage().getImageType());
+                    mainImage.setReferenceType("product_size");
+                    mainImage = imageRepository.save(mainImage);
+                    size.setMainImage(mainImage);
+                }
+
+                // Handle additional images for size
+                if (sizeDto.getAdditionalImages() != null && !sizeDto.getAdditionalImages().isEmpty()) {
+                    List<ImageEntity> additionalImages = new ArrayList<>();
+                    for (ImageRequestDto imageDto : sizeDto.getAdditionalImages()) {
                         ImageEntity image = new ImageEntity();
                         image.setBase64Image(imageDto.getBase64Image());
                         image.setImageType(imageDto.getImageType());
-                        image.setReferenceType("product");
-                        return imageRepository.save(image);
-                    })
-                    .collect(Collectors.toList());
-
-            productMapper.updateProductImages(savedProduct, additionalImages);
-        }
-
-        // Handle product sizes
-        if (requestDto.getSizes() != null && !requestDto.getSizes().isEmpty()) {
-            List<ProductSizeEntity> sizes = new ArrayList<>();
-            for (ProductSizeRequestDto sizeRequestDto : requestDto.getSizes()) {
-                // Create size entity
-                ProductSizeEntity size = productMapper.toSizeEntity(sizeRequestDto);
-
-                // CRITICAL: Set the product reference
-                size.setProduct(savedProduct);
-
-                // Validate discount and set default status
-                size.validateDiscount();
-                if (size.getStatus() == null) {
-                    size.setStatus(StatusData.ACTIVE);
+                        image.setReferenceType("product_size");
+                        additionalImages.add(imageRepository.save(image));
+                    }
+                    size.setAdditionalImages(additionalImages);
                 }
 
-                // Handle main image for size
-                if (size.getMainImage() != null) {
-                    size.getMainImage().setReferenceType("product_size");
-                }
-
-                // Save the size entity
+                // Save the size and keep track of it
                 ProductSizeEntity savedSize = productSizeRepository.save(size);
-                sizes.add(savedSize);
-
-                // Handle additional images for size
-                if (sizeRequestDto.getAdditionalImages() != null && !sizeRequestDto.getAdditionalImages().isEmpty()) {
-                    List<ImageEntity> sizeImages = sizeRequestDto.getAdditionalImages().stream()
-                            .map(imageDto -> {
-                                ImageEntity image = new ImageEntity();
-                                image.setBase64Image(imageDto.getBase64Image());
-                                image.setImageType(imageDto.getImageType());
-                                image.setReferenceType("product_size");
-                                return imageRepository.save(image);
-                            })
-                            .collect(Collectors.toList());
-
-                    productMapper.updateProductSizeImages(savedSize, sizeImages);
-                    productSizeRepository.save(savedSize);
-                }
+                savedSizes.add(savedSize);
+                log.info("Saved size {} with ID {} for product {}", savedSize.getSize(), savedSize.getId(), savedProduct.getId());
             }
 
-            // Update product sizes list
-            savedProduct.setSizes(sizes);
-
-            // Clear product promotion if it has sizes
-            if (!savedProduct.getSizes().isEmpty()) {
-                savedProduct.resetDiscount();
-            }
+            // Reload the product with its sizes
+            entityManager.refresh(savedProduct);
         }
 
-        // Final save to ensure all changes are persisted
-        ProductEntity finalProduct = productRepository.saveAndFlush(savedProduct);
-        log.info("Product created successfully in shop {}", shopId);
+        log.info("Product created successfully in shop {} with ID {}", shopId, savedProduct.getId());
+
+        // Get a fresh copy of the product to ensure all relationships are loaded
+        ProductEntity finalProduct = productRepository.findById(savedProduct.getId())
+                .orElseThrow(() -> new NotFoundException("Product not found after creation"));
+
+        // Convert to DTO using mapper (with our custom pricing summary)
         return productMapper.toDto(finalProduct);
     }
 

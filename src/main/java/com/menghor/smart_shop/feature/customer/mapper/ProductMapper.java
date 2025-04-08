@@ -1,5 +1,7 @@
 package com.menghor.smart_shop.feature.customer.mapper;
 
+import com.menghor.smart_shop.enumations.PromotionStatus;
+import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
@@ -14,6 +16,7 @@ import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +34,65 @@ public abstract class ProductMapper {
     @Mapping(target = "mainImage", qualifiedByName = "mapProductMainImage")
     @Mapping(target = "additionalImages", qualifiedByName = "mapProductAdditionalImages")
     @Mapping(target = "sizes", qualifiedByName = "mapProductSizes")
+    @Mapping(target = "minPrice", ignore = true)
+    @Mapping(target = "maxPrice", ignore = true)
+    @Mapping(target = "maxDiscountPercentage", ignore = true)
+    @Mapping(target = "hasActivePromotion", ignore = true)
+    @Mapping(target = "sizeCount", ignore = true)
+    @Mapping(target = "hasSizes", ignore = true)
     public abstract ProductResponseDto toDto(ProductEntity product);
+
+    @AfterMapping
+    protected void calculatePricingSummary(ProductEntity product, @MappingTarget ProductResponseDto dto) {
+        // Check if product has sizes
+        boolean hasSizes = product.getSizes() != null && !product.getSizes().isEmpty();
+        dto.setHasSizes(hasSizes);
+
+        if (hasSizes) {
+            // Count sizes
+            dto.setSizeCount(product.getSizes().size());
+
+            // Calculate min and max prices
+            List<Double> finalPrices = product.getSizes().stream()
+                    .map(ProductSizeEntity::getFinalPrice)
+                    .collect(Collectors.toList());
+
+            dto.setMinPrice(Collections.min(finalPrices));
+            dto.setMaxPrice(Collections.max(finalPrices));
+
+            // Find highest discount percentage and check for active promotions
+            double maxDiscount = 0.0;
+            boolean hasPromotion = false;
+
+            for (ProductSizeEntity size : product.getSizes()) {
+                if (size.isPromotionActive()) {
+                    hasPromotion = true;
+                    if (size.getDiscountType() == DiscountType.PERCENTAGE &&
+                            size.getDiscountValue() != null &&
+                            size.getDiscountValue() > maxDiscount) {
+                        maxDiscount = size.getDiscountValue();
+                    }
+                }
+            }
+
+            dto.setMaxDiscountPercentage(maxDiscount > 0 ? maxDiscount : null);
+            dto.setHasActivePromotion(hasPromotion);
+        } else {
+            // For product without sizes
+            dto.setMinPrice(product.getFinalPrice());
+            dto.setMaxPrice(product.getFinalPrice());
+            dto.setSizeCount(0);
+
+            boolean hasPromotion = product.isPromotionActive();
+            dto.setHasActivePromotion(hasPromotion);
+
+            if (hasPromotion && product.getDiscountType() == DiscountType.PERCENTAGE) {
+                dto.setMaxDiscountPercentage(product.getDiscountValue());
+            } else {
+                dto.setMaxDiscountPercentage(null);
+            }
+        }
+    }
 
     // Pagination helper method
     public CustomPaginationResponseDto<ProductResponseDto> toPaginationDto(

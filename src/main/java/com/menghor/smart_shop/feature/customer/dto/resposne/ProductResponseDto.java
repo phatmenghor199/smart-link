@@ -41,4 +41,12 @@ public class ProductResponseDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // New fields for price and discount summary
+    private Double minPrice;
+    private Double maxPrice;
+    private Double maxDiscountPercentage;
+    private Boolean hasActivePromotion;
+    private Integer sizeCount;
+    private Boolean hasSizes;
 }
