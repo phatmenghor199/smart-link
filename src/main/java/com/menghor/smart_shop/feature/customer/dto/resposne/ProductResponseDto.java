@@ -17,8 +17,8 @@ import java.util.List;
 public class ProductResponseDto {
     private Long id;
     private String name;
-    private String size;
     private Double price;
+    private String description;
     private StatusData status;
     private Double finalPrice;
     private String promotionStatus;
@@ -26,6 +26,7 @@ public class ProductResponseDto {
     private Long categoryId;
     private Long shopId;
 
+    // Promotion details
     private DiscountType discountType;
     private Double discountValue;
     private LocalDate discountStartDate;
@@ -37,16 +38,9 @@ public class ProductResponseDto {
     // Additional images for the product
     private List<ImageResponseDto> additionalImages;
 
+    // Product sizes (optional)
     private List<ProductSizeResponseDto> sizes;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    // New fields for price and discount summary
-    private Double minPrice;
-    private Double maxPrice;
-    private Double maxDiscountPercentage;
-    private Boolean hasActivePromotion;
-    private Integer sizeCount;
-    private Boolean hasSizes;
 }

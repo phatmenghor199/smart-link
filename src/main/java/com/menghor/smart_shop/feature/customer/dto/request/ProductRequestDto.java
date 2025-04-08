@@ -3,6 +3,9 @@ package com.menghor.smart_shop.feature.customer.dto.request;
 import com.menghor.smart_shop.enumations.DiscountType;
 import com.menghor.smart_shop.enumations.StatusData;
 import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,22 +17,26 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductRequestDto {
+    @NotBlank(message = "Product name is required")
+    @Size(min = 2, max = 255, message = "Product name must be between 2 and 255 characters")
     private String name;
+
     private Double price;
     private String description;
+
+    @NotNull(message = "Category ID is required")
     private Long categoryId;
-    private StatusData status = StatusData.ACTIVE; // Default to active
 
-    // Discount fields
-    private DiscountType discountType; // Discount type (PERCENTAGE or FIXED_AMOUNT)
-    private Double discountValue; // Discount value (e.g., 10% or $5)
-    private LocalDate discountStartDate; // Discount start date
-    private LocalDate discountEndDate; // Discount end date
+    private StatusData status = StatusData.ACTIVE;
 
-    // Main product image
+    // Optional discount fields
+    private DiscountType discountType;
+    private Double discountValue;
+    private LocalDate discountStartDate;
+    private LocalDate discountEndDate;
+
+    // Optional images
     private ImageRequestDto image;
-
-    // Additional product images
     private List<ImageRequestDto> additionalImages;
 
     // Product sizes
