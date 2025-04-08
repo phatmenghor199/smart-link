@@ -17,9 +17,9 @@ spring:
                 use_jdbc_metadata_defaults: false
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/smart_shop?reWriteBatchedInserts=true&stringtype=unspecified
-    username: postgres
-    password: Hour1819
+    url: jdbc:postgresql://ep-polished-flower-a1hcns4i-pooler.ap-southeast-1.aws.neon.tech:5432/smart_link?sslmode=require
+    username: neondb_owner
+    password: npg_xWZ4N8SnXHkl
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
