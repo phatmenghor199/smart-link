@@ -16,7 +16,7 @@ spring:
                 use_jdbc_metadata_defaults: false
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/smart_shop
+    url: jdbc:postgresql://localhost:5433/smart_link
     username: postgres
     password: Hour1819
     driver-class-name: org.postgresql.Driver

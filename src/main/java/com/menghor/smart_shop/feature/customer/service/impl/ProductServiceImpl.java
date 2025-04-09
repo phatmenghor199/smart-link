@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -292,15 +293,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponseDto updateProductSize(Long productId, Long sizeId, ProductSizeRequestDto sizeRequestDto) {
-        log.info("Updating product size with ID {} for product with ID {}", sizeId, productId);
-        Long shopId = securityUtils.getShopIdFromToken();
+    @Transactional
+    public ProductResponseDto updateProductSize(Long productId, Long sizeId, ProductSizeRequestDto sizeRequest) {
+        log.info("Updating size with ID: {} for product with ID: {}", sizeId, productId);
 
         // Find the product
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
 
         // Check if product belongs to current shop
+        Long shopId = securityUtils.getShopIdFromToken();
         if (!product.getShop().getId().equals(shopId)) {
             throw new NotFoundException("Product does not belong to your shop");
         }
@@ -315,11 +317,36 @@ public class ProductServiceImpl implements ProductService {
                     String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
         }
 
-        // Update size fields
-        productMapper.updateSizeFromDto(sizeRequestDto, size);
-        size.validateDiscount();
+        // Use mapper to update the size entity from the DTO
+        productMapper.updateSizeFromDto(sizeRequest, size);
 
+        // Validate discount if present
+        if (size.getDiscountType() != null && size.getDiscountValue() != null) {
+            size.validateDiscount();
+        }
+
+        // Handle additional images if provided (this part still needs manual handling)
+        if (sizeRequest.getAdditionalImages() != null && !sizeRequest.getAdditionalImages().isEmpty()) {
+            List<ImageEntity> additionalImages = sizeRequest.getAdditionalImages().stream()
+                    .map(imageDto -> {
+                        ImageEntity image = new ImageEntity();
+                        image.setBase64Image(imageDto.getBase64Image());
+                        image.setImageType(imageDto.getImageType());
+                        image.setReferenceType("product_size");
+                        return imageRepository.save(image);
+                    })
+                    .collect(Collectors.toList());
+            productMapper.updateProductSizeImages(size, additionalImages);
+        }
+
+        // Save the updated size
         productSizeRepository.save(size);
+
+        // Refresh the product to ensure we have the latest data
+        product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        log.info("Size updated successfully for product ID: {}", productId);
 
         return productMapper.toDto(product);
     }
@@ -428,5 +455,264 @@ public class ProductServiceImpl implements ProductService {
                     log.error("Category with id {} not found in shop {}", categoryId, shopId);
                     return new NotFoundException(String.format(ErrorMessages.CATEGORY_NOT_FOUND, categoryId));
                 });
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto updateProductMainImage(Long productId, ImageRequestDto imageRequest) {
+        log.info("Updating main image for product with ID: {}", productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Update or create the main image
+        if (product.getMainImage() == null) {
+            // Create new image
+            ImageEntity mainImage = new ImageEntity();
+            mainImage.setBase64Image(imageRequest.getBase64Image());
+            mainImage.setImageType(imageRequest.getImageType());
+            mainImage.setReferenceType("product");
+            product.setMainImage(imageRepository.save(mainImage));
+        } else {
+            // Update existing image
+            product.getMainImage().setBase64Image(imageRequest.getBase64Image());
+            product.getMainImage().setImageType(imageRequest.getImageType());
+            product.getMainImage().setReferenceType("product"); // Ensure correct reference type
+        }
+
+        // Save and return the updated product
+        ProductEntity updatedProduct = productRepository.save(product);
+        log.info("Main image updated successfully for product ID: {}", productId);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto addProductAdditionalImages(Long productId, List<ImageRequestDto> imageRequests) {
+        log.info("Adding additional images for product with ID: {}", productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Process each image request
+        for (ImageRequestDto imageRequest : imageRequests) {
+            ImageEntity image = new ImageEntity();
+            image.setBase64Image(imageRequest.getBase64Image());
+            image.setImageType(imageRequest.getImageType());
+            image.setReferenceType("product");
+
+            // Save the image
+            ImageEntity savedImage = imageRepository.save(image);
+
+            // Add to the product's additional images
+            product.getAdditionalImages().add(savedImage);
+        }
+
+        // Save and return the updated product
+        ProductEntity updatedProduct = productRepository.save(product);
+        log.info("Additional images added successfully to product ID: {}", productId);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto removeProductAdditionalImage(Long productId, UUID imageId) {
+        log.info("Removing image with ID: {} from product with ID: {}", imageId, productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find and remove the image
+        ImageEntity imageToRemove = product.getAdditionalImages().stream()
+                .filter(img -> img.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Image not found in product's additional images"));
+
+        // Remove from the product's list
+        product.getAdditionalImages().remove(imageToRemove);
+
+        // Delete the image entity
+        imageRepository.delete(imageToRemove);
+
+        // Save and return the updated product
+        ProductEntity updatedProduct = productRepository.save(product);
+        log.info("Image removed successfully from product ID: {}", productId);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto updateProductSizeMainImage(Long productId, Long sizeId, ImageRequestDto imageRequest) {
+        log.info("Updating main image for size ID: {} of product ID: {}", sizeId, productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size
+        ProductSizeEntity size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Ensure the size belongs to this product
+        if (!size.getProduct().getId().equals(productId)) {
+            throw new NotFoundException(
+                    String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
+        }
+
+        // Update or create the main image
+        if (size.getMainImage() == null) {
+            // Create new image
+            ImageEntity mainImage = new ImageEntity();
+            mainImage.setBase64Image(imageRequest.getBase64Image());
+            mainImage.setImageType(imageRequest.getImageType());
+            mainImage.setReferenceType("product_size");
+            size.setMainImage(imageRepository.save(mainImage));
+        } else {
+            // Update existing image
+            size.getMainImage().setBase64Image(imageRequest.getBase64Image());
+            size.getMainImage().setImageType(imageRequest.getImageType());
+            size.getMainImage().setReferenceType("product_size"); // Ensure correct reference type
+        }
+
+        // Save the size
+        productSizeRepository.save(size);
+
+        // Refresh the product to ensure we have the latest data
+        product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        log.info("Size main image updated successfully for product ID: {}", productId);
+
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto addProductSizeAdditionalImages(Long productId, Long sizeId, List<ImageRequestDto> imageRequests) {
+        log.info("Adding additional images for size ID: {} of product ID: {}", sizeId, productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size
+        ProductSizeEntity size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Ensure the size belongs to this product
+        if (!size.getProduct().getId().equals(productId)) {
+            throw new NotFoundException(
+                    String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
+        }
+
+        // Process each image request
+        for (ImageRequestDto imageRequest : imageRequests) {
+            ImageEntity image = new ImageEntity();
+            image.setBase64Image(imageRequest.getBase64Image());
+            image.setImageType(imageRequest.getImageType());
+            image.setReferenceType("product_size");
+
+            // Save the image
+            ImageEntity savedImage = imageRepository.save(image);
+
+            // Add to the size's additional images
+            size.getAdditionalImages().add(savedImage);
+        }
+
+        // Save the size
+        ProductSizeEntity productSize = productSizeRepository.save(size);
+
+//        // Refresh the product to ensure we have the latest data
+//        product = productRepository.findById(productId)
+//                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        log.info("Additional images added successfully to size ID: {} of product ID: {}", sizeId, productId);
+
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDto removeProductSizeAdditionalImage(Long productId, Long sizeId, UUID imageId) {
+        log.info("Removing image with ID: {} from size ID: {} of product ID: {}", imageId, sizeId, productId);
+
+        // Find the product
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Ensure the product belongs to the current shop
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size
+        ProductSizeEntity size = productSizeRepository.findById(sizeId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Ensure the size belongs to this product
+        if (!size.getProduct().getId().equals(productId)) {
+            throw new NotFoundException(
+                    String.format(ErrorMessages.PRODUCT_SIZE_NOT_ASSOCIATED_WITH_PRODUCT, sizeId, productId));
+        }
+
+        // Find and remove the image
+        ImageEntity imageToRemove = size.getAdditionalImages().stream()
+                .filter(img -> img.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Image not found in size's additional images"));
+
+        // Remove from the size's list
+        size.getAdditionalImages().remove(imageToRemove);
+
+        // Delete the image entity
+        imageRepository.delete(imageToRemove);
+
+        // Save the size
+        productSizeRepository.save(size);
+
+        // Refresh the product to ensure we have the latest data
+        product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        log.info("Image removed successfully from size ID: {} of product ID: {}", sizeId, productId);
+
+        return productMapper.toDto(product);
     }
 }

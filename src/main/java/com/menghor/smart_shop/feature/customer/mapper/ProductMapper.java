@@ -242,19 +242,6 @@ public abstract class ProductMapper {
         return response;
     }
 
-    public void updateProductImages(ProductEntity product, List<ImageEntity> images) {
-        if (product.getAdditionalImages() != null) {
-            product.getAdditionalImages().clear();
-        }
-
-        if (images != null && !images.isEmpty()) {
-            images.forEach(image -> {
-                image.setReferenceType("product");
-                product.addAdditionalImage(image);
-            });
-        }
-    }
-
     public void updateProductSizeImages(ProductSizeEntity size, List<ImageEntity> images) {
         if (size.getAdditionalImages() != null) {
             size.getAdditionalImages().clear();

@@ -6,6 +6,7 @@ import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ProductResponseDto;
 import com.menghor.smart_shop.feature.customer.service.ProductService;
+import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
 import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/product")
@@ -137,4 +139,86 @@ public class ProductController {
         ProductResponseDto updatedProduct = productService.deleteProductSize(productId, sizeId);
         return new ApiResponse<>("Success", "Size deleted successfully", updatedProduct);
     }
+
+    /**
+     * Update the main image of a product
+     */
+    @PutMapping("/{productId}/image")
+    public ApiResponse<ProductResponseDto> updateProductMainImage(
+            @PathVariable Long productId,
+            @RequestBody ImageRequestDto imageRequest
+    ) {
+        log.info("Received request to update main image for product with ID: {}", productId);
+        ProductResponseDto updatedProduct = productService.updateProductMainImage(productId, imageRequest);
+        return new ApiResponse<>("Success", "Product main image updated successfully", updatedProduct);
+    }
+
+    /**
+     * Add additional images to a product
+     */
+    @PostMapping("/{productId}/images")
+    public ApiResponse<ProductResponseDto> addProductAdditionalImages(
+            @PathVariable Long productId,
+            @RequestBody List<ImageRequestDto> imageRequests
+    ) {
+        log.info("Received request to add additional images for product with ID: {}", productId);
+        ProductResponseDto updatedProduct = productService.addProductAdditionalImages(productId, imageRequests);
+        return new ApiResponse<>("Success", "Additional images added successfully", updatedProduct);
+    }
+
+    /**
+     * Remove an additional image from a product
+     */
+    @DeleteMapping("/{productId}/images/{imageId}")
+    public ApiResponse<ProductResponseDto> removeProductAdditionalImage(
+            @PathVariable Long productId,
+            @PathVariable UUID imageId
+    ) {
+        log.info("Received request to remove image with ID: {} from product with ID: {}", imageId, productId);
+        ProductResponseDto updatedProduct = productService.removeProductAdditionalImage(productId, imageId);
+        return new ApiResponse<>("Success", "Image removed successfully", updatedProduct);
+    }
+
+    /**
+     * Update the main image of a product size
+     */
+    @PutMapping("/{productId}/sizes/{sizeId}/image")
+    public ApiResponse<ProductResponseDto> updateProductSizeMainImage(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @RequestBody ImageRequestDto imageRequest
+    ) {
+        log.info("Received request to update main image for size ID: {} of product ID: {}", sizeId, productId);
+        ProductResponseDto updatedProduct = productService.updateProductSizeMainImage(productId, sizeId, imageRequest);
+        return new ApiResponse<>("Success", "Size main image updated successfully", updatedProduct);
+    }
+
+    /**
+     * Add additional images to a product size
+     */
+    @PostMapping("/{productId}/sizes/{sizeId}/images")
+    public ApiResponse<ProductResponseDto> addProductSizeAdditionalImages(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @RequestBody List<ImageRequestDto> imageRequests
+    ) {
+        log.info("Received request to add additional images for size ID: {} of product ID: {}", sizeId, productId);
+        ProductResponseDto updatedProduct = productService.addProductSizeAdditionalImages(productId, sizeId, imageRequests);
+        return new ApiResponse<>("Success", "Size additional images added successfully", updatedProduct);
+    }
+
+    /**
+     * Remove an additional image from a product size
+     */
+    @DeleteMapping("/{productId}/sizes/{sizeId}/images/{imageId}")
+    public ApiResponse<ProductResponseDto> removeProductSizeAdditionalImage(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId,
+            @PathVariable UUID imageId
+    ) {
+        log.info("Received request to remove image with ID: {} from size ID: {} of product ID: {}", imageId, sizeId, productId);
+        ProductResponseDto updatedProduct = productService.removeProductSizeAdditionalImage(productId, sizeId, imageId);
+        return new ApiResponse<>("Success", "Size image removed successfully", updatedProduct);
+    }
+
 }
