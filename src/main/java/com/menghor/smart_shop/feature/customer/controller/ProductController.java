@@ -10,6 +10,7 @@ import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.sql.Delete;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -122,5 +123,18 @@ public class ProductController {
         log.info("Received request to reset discount for product with ID: {}", productId);
         ProductResponseDto updatedProduct = productService.resetDiscountForProduct(productId);
         return new ApiResponse<>("Success", "Product discount reset successfully", updatedProduct);
+    }
+
+    /**
+     * Delete a specific size from a product
+     */
+    @DeleteMapping("/{productId}/sizes/{sizeId}")
+    public ApiResponse<ProductResponseDto> deleteProductSize(
+            @PathVariable Long productId,
+            @PathVariable Long sizeId
+    ) {
+        log.info("Received request to delete size ID: {} from product ID: {}", sizeId, productId);
+        ProductResponseDto updatedProduct = productService.deleteProductSize(productId, sizeId);
+        return new ApiResponse<>("Success", "Size deleted successfully", updatedProduct);
     }
 }

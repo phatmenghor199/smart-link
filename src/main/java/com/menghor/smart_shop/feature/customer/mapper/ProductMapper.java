@@ -15,6 +15,8 @@ import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,48 +39,79 @@ public abstract class ProductMapper {
     @AfterMapping
     protected void calculatePromotionDetails(
             @MappingTarget ProductResponseDto dto,
-            @Context ProductEntity product
+            ProductEntity product
     ) {
         boolean hasSizes = product.getSizes() != null && !product.getSizes().isEmpty();
 
-        // If product has sizes, clear product-level discount and image fields
+        // If product has sizes, update product-level information with size data
         if (hasSizes) {
-            // Reset product-level discount and image fields
-            dto.setDiscountType(null);
-            dto.setDiscountValue(null);
-            dto.setDiscountStartDate(null);
-            dto.setDiscountEndDate(null);
-            dto.setMainImage(null);
-            dto.setAdditionalImages(null);
-            dto.setPromotionStatus(PromotionStatus.INACTIVE.name());
-
-            // Filter sizes that have active promotions
+            // Find sizes with active promotions
             List<ProductSizeEntity> promotionalSizes = product.getSizes().stream()
                     .filter(ProductSizeEntity::isPromotionActive) // Only include sizes with active promotions
                     .sorted(Comparator.comparing(ProductSizeEntity::getDiscountValue).reversed()) // Sort by highest discount
-                    .collect(Collectors.toList());
+                    .toList();
 
             // If there are promotional sizes, take the one with the highest discount
-            ProductSizeEntity selectedSize = promotionalSizes.isEmpty()
-                    ? product.getSizes().get(0) // If no size has promotion, take the first size
-                    : promotionalSizes.get(0); // Take the size with the highest discount
+            if (!promotionalSizes.isEmpty()) {
+                ProductSizeEntity selectedSize = promotionalSizes.get(0);
 
-            // Set promotion details from the selected size
-            dto.setDiscountType(selectedSize.getDiscountType());
-            dto.setDiscountValue(selectedSize.getDiscountValue());
-            dto.setDiscountStartDate(selectedSize.getDiscountStartDate());
-            dto.setDiscountEndDate(selectedSize.getDiscountEndDate());
-            dto.setPromotionStatus(PromotionStatus.ACTIVE.name());
-            dto.setFinalPrice(selectedSize.getFinalPrice());
+                // Set base price, promotion details from the selected size
+                dto.setPrice(selectedSize.getPrice()); // Use price from the promotional size
+                dto.setDiscountType(selectedSize.getDiscountType());
+                dto.setDiscountValue(selectedSize.getDiscountValue());
+                dto.setDiscountStartDate(selectedSize.getDiscountStartDate());
+                dto.setDiscountEndDate(selectedSize.getDiscountEndDate());
+                dto.setPromotionStatus(PromotionStatus.ACTIVE.name());
 
-            // Set images from the selected size (if available)
-            dto.setMainImage(imageMapper.toDto(selectedSize.getMainImage()));
-            if (selectedSize.getAdditionalImages() != null) {
-                dto.setAdditionalImages(
-                        selectedSize.getAdditionalImages().stream()
-                                .map(imageMapper::toDto)
-                                .collect(Collectors.toList())
-                );
+                // Format final price to 2 decimal places
+                Double finalPrice = selectedSize.getFinalPrice();
+                if (finalPrice != null) {
+                    BigDecimal bd = new BigDecimal(finalPrice).setScale(2, RoundingMode.HALF_UP);
+                    dto.setFinalPrice(bd.doubleValue());
+                }
+
+                // Set images from the selected size (if available)
+                if (selectedSize.getMainImage() != null) {
+                    dto.setMainImage(imageMapper.toDto(selectedSize.getMainImage()));
+                }
+
+                if (selectedSize.getAdditionalImages() != null && !selectedSize.getAdditionalImages().isEmpty()) {
+                    dto.setAdditionalImages(
+                            selectedSize.getAdditionalImages().stream()
+                                    .map(imageMapper::toDto)
+                                    .collect(Collectors.toList())
+                    );
+                }
+            } else {
+                // If no sizes have promotions, use information from the first size
+                ProductSizeEntity firstSize = product.getSizes().get(0);
+
+                dto.setPrice(firstSize.getPrice()); // Use price from first size
+                dto.setPromotionStatus(PromotionStatus.INACTIVE.name());
+                dto.setDiscountType(null);
+                dto.setDiscountValue(null);
+                dto.setDiscountStartDate(null);
+                dto.setDiscountEndDate(null);
+
+                // Format final price to 2 decimal places (same as price when no promotion)
+                Double finalPrice = firstSize.getPrice();
+                if (finalPrice != null) {
+                    BigDecimal bd = new BigDecimal(finalPrice).setScale(2, RoundingMode.HALF_UP);
+                    dto.setFinalPrice(bd.doubleValue());
+                }
+
+                // Set images from the first size (if available)
+                if (firstSize.getMainImage() != null) {
+                    dto.setMainImage(imageMapper.toDto(firstSize.getMainImage()));
+                }
+
+                if (firstSize.getAdditionalImages() != null && !firstSize.getAdditionalImages().isEmpty()) {
+                    dto.setAdditionalImages(
+                            firstSize.getAdditionalImages().stream()
+                                    .map(imageMapper::toDto)
+                                    .collect(Collectors.toList())
+                    );
+                }
             }
         } else {
             // If the product doesn't have sizes, use the product-level data
@@ -91,10 +124,15 @@ public abstract class ProductMapper {
                     ? product.getAdditionalImages().stream().map(imageMapper::toDto).collect(Collectors.toList())
                     : null);
             dto.setPromotionStatus(getProductPromotionStatus(product));
-            dto.setFinalPrice(getProductFinalPrice(product));
+
+            // Format final price to 2 decimal places
+            Double finalPrice = getProductFinalPrice(product);
+            if (finalPrice != null) {
+                BigDecimal bd = new BigDecimal(finalPrice).setScale(2, RoundingMode.HALF_UP);
+                dto.setFinalPrice(bd.doubleValue());
+            }
         }
     }
-
 
     @Named("mapProductMainImage")
     public ImageResponseDto mapProductMainImage(ImageEntity image) {
@@ -134,7 +172,14 @@ public abstract class ProductMapper {
         sizeDto.setId(size.getId());
         sizeDto.setSize(size.getSize());
         sizeDto.setPrice(size.getPrice());
-        sizeDto.setFinalPrice(size.getFinalPrice());
+
+        // Format final price to 2 decimal places
+        Double finalPrice = size.getFinalPrice();
+        if (finalPrice != null) {
+            BigDecimal bd = new BigDecimal(finalPrice).setScale(2, RoundingMode.HALF_UP);
+            sizeDto.setFinalPrice(bd.doubleValue());
+        }
+
         sizeDto.setPromotionStatus(size.getPromotionStatus() != null
                 ? size.getPromotionStatus().name()
                 : PromotionStatus.INACTIVE.name());

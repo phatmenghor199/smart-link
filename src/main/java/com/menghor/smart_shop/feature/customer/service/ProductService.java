@@ -39,4 +39,6 @@ public interface ProductService {
     // Discount reset method
     @Transactional
     ProductResponseDto resetDiscountForProduct(Long productId);
+
+    ProductResponseDto deleteProductSize(Long productId, Long sizeId);
 }

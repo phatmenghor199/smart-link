@@ -377,6 +377,50 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toDto(updatedProduct);
     }
 
+    @Override
+    @Transactional
+    public ProductResponseDto deleteProductSize(Long productId, Long sizeId) {
+        log.info("Deleting size ID: {} from product ID: {}", sizeId, productId);
+
+        // Verify the product exists
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException(String.format(ErrorMessages.PRODUCT_NOT_FOUND, productId)));
+
+        // Verify the current user owns the shop that owns this product
+        Long shopId = securityUtils.getShopIdFromToken();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new NotFoundException("Product does not belong to your shop");
+        }
+
+        // Find the size to delete
+        ProductSizeEntity sizeToDelete = product.getSizes().stream()
+                .filter(size -> size.getId().equals(sizeId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(
+                        String.format(ErrorMessages.PRODUCT_SIZE_NOT_FOUND, sizeId)));
+
+        // Remove the size from the product's size list
+        product.getSizes().remove(sizeToDelete);
+
+        // Delete the size entity
+        productSizeRepository.delete(sizeToDelete);
+
+        // If no sizes remain and the product had pricing info derived from sizes,
+        // you might want to set default product-level pricing
+        if (product.getSizes().isEmpty()) {
+            // For example, set a default price or preserve the last known price
+            if (product.getPrice() == null) {
+                product.setPrice(sizeToDelete.getPrice());
+            }
+        }
+
+        // Save and return the updated product
+        ProductEntity updatedProduct = productRepository.save(product);
+        log.info("Size deleted successfully from product ID: {}", productId);
+
+        return productMapper.toDto(updatedProduct);
+    }
+
     // Helper method to get a category that belongs to the user's shop
     private CategoryEntity getUserOwnedCategory(Long categoryId, Long shopId) {
         return categoryRepository.findByIdAndShopId(categoryId, shopId)

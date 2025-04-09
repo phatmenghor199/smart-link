@@ -10,6 +10,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -60,11 +62,18 @@ public class ProductSizeEntity extends BaseEntity {
     // Compute final price based on discount type
     public Double getFinalPrice() {
         if (isPromotionActive()) {
+            double calculatedPrice;
             if (discountType == DiscountType.PERCENTAGE) {
-                return Math.max(price - (price * discountValue / 100), 0); // Ensure the price doesn't go below 0
+                calculatedPrice = Math.max(price - (price * discountValue / 100), 0); // Ensure the price doesn't go below 0
             } else if (discountType == DiscountType.FIXED_AMOUNT) {
-                return Math.max(price - discountValue, 0); // Ensure the price doesn't go below 0
+                calculatedPrice = Math.max(price - discountValue, 0); // Ensure the price doesn't go below 0
+            } else {
+                return price;
             }
+
+            // Round to 2 decimal places
+            BigDecimal bd = new BigDecimal(calculatedPrice).setScale(2, RoundingMode.HALF_UP);
+            return bd.doubleValue();
         }
         return price;
     }
