@@ -21,18 +21,19 @@ public class CartItemEntity extends BaseEntity {
     @JoinColumn(name = "cart_id")
     private CartEntity cart;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     private ProductEntity product;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "size_id")
     private ProductSizeEntity size;
 
     private Integer quantity;
-    private Double price;
+    private Double price; // Unit price (with discounts already applied)
 
     @Enumerated(EnumType.STRING)
-    private DiscountType discountType;
-    private Double discountValue;
+    private DiscountType discountType; // Only stored for information, not for calculation
+
+    private Double discountValue; // Only stored for information, not for calculation
 }

@@ -1,23 +1,36 @@
 package com.menghor.smart_shop.feature.order.dto.response;
 
-import com.menghor.smart_shop.feature.customer.dto.resposne.ShopResponseDto;
-import com.menghor.smart_shop.feature.customer.models.ShopEntity;
-import com.menghor.smart_shop.feature.order.dto.request.OrderItemRequestDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class CartResponseDto {
+    // Cart identification
     private Long id;
-    private List<CartItemResponseDto> cartItems;
-    private Long shopId; // Changed from ShopResponseDto to Long shopId
-    private Double totalAmount;
-    private String createdAt;
-    private String updatedAt;
+    private Long shopId;
+    private String shopName;
+
+    // Cart contents
+    private List<CartItemResponseDto> cartItems = new ArrayList<>();
+    private Integer itemCount = 0;       // Number of unique items
+    private Integer totalQuantity = 0;   // Total quantity of all items
+
+    // Cart financials
+    private Double subtotal = 0.0;       // Sum of (originalPrice * quantity) for all items
+    private Double totalDiscount = 0.0;  // Sum of all discounts applied
+    private Double total = 0.0;          // Final amount (subtotal - totalDiscount)
+
+    // Timestamps
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String formattedTimestamp; // Human-readable timestamp
 }
