@@ -2,9 +2,9 @@ package com.menghor.smart_shop.feature.customer.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
 import com.menghor.smart_shop.enumations.StatusData;
-import com.menghor.smart_shop.exceptoins.error.BadRequestException;
-import com.menghor.smart_shop.exceptoins.error.DuplicateNameException;
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.BadRequestException;
+import com.menghor.smart_shop.exceptions.error.DuplicateNameException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.customer.dto.request.CategoryFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.CategoryRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.CategoryResponseDto;

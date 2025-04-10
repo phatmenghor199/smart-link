@@ -1,8 +1,8 @@
 package com.menghor.smart_shop.feature.setting.service.impl;
 
 import com.menghor.smart_shop.enumations.Status;
-import com.menghor.smart_shop.exceptoins.error.BadRequestException;
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.BadRequestException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.setting.dto.request.PlanRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.PlanResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.PlanMapper;

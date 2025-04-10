@@ -1,7 +1,7 @@
 package com.menghor.smart_shop.feature.auth.controller;
 
 import com.menghor.smart_shop.constants.SuccessMessages;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordByAdminRequestDto;
 import com.menghor.smart_shop.feature.auth.dto.request.ChangePasswordRequestDto;
 import com.menghor.smart_shop.feature.auth.dto.request.UserFilterDto;

@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.customer.controller;
 
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.BannerRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.BannerResponseDto;

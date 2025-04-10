@@ -1,4 +1,4 @@
-package com.menghor.smart_shop.exceptoins.error;
+package com.menghor.smart_shop.exceptions.error;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

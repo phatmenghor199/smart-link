@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.utils.pagiantion;
 
-import com.menghor.smart_shop.exceptoins.error.InvalidPaginationException;
+import com.menghor.smart_shop.exceptions.error.InvalidPaginationException;
 
 public class PaginationUtils {
 

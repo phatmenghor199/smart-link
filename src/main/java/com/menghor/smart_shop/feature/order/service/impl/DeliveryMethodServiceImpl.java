@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.order.service.impl;
 
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import com.menghor.smart_shop.feature.order.dto.request.DeliveryMethodRequestDto;
 import com.menghor.smart_shop.feature.order.dto.response.DeliveryMethodResponseDto;

@@ -1,4 +1,4 @@
-package com.menghor.smart_shop.exceptoins.response;
+package com.menghor.smart_shop.exceptions.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

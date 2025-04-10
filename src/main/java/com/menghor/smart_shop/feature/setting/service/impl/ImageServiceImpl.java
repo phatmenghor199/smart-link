@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.setting.service.impl;
 
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.mapper.ImageMapper;

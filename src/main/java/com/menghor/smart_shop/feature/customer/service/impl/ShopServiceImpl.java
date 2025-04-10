@@ -1,7 +1,7 @@
 package com.menghor.smart_shop.feature.customer.service.impl;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
 import com.menghor.smart_shop.feature.customer.dto.request.ShopRequestDto;

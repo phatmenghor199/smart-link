@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.customer.controller;
 
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductFilterDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.request.ProductSizeRequestDto;
@@ -11,7 +11,6 @@ import com.menghor.smart_shop.utils.database.CustomPaginationResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.sql.Delete;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

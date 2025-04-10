@@ -1,7 +1,7 @@
 package com.menghor.smart_shop.feature.customer.controller;
 
 import com.menghor.smart_shop.constants.SuccessMessages;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.customer.dto.request.ShopRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ShopResponseDto;
 import com.menghor.smart_shop.feature.customer.service.ShopService;

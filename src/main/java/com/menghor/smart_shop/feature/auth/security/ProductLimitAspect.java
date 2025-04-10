@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.auth.security;
 
-import com.menghor.smart_shop.exceptoins.error.BadRequestException;
+import com.menghor.smart_shop.exceptions.error.BadRequestException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.setting.model.SubscriptionEntity;
 import com.menghor.smart_shop.feature.setting.repository.SubscriptionRepository;

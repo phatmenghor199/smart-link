@@ -1,7 +1,7 @@
 package com.menghor.smart_shop.feature.setting.controller;
 
 import com.menghor.smart_shop.enumations.Status;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.setting.dto.request.PlanFilterRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.request.PlanRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.request.PlanStatusUpdateDto;
@@ -13,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/plans")

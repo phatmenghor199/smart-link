@@ -1,6 +1,6 @@
 package com.menghor.smart_shop.feature.customer.service.impl;
 
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.customer.dto.request.ShopInformationRequestDto;
 import com.menghor.smart_shop.feature.customer.dto.resposne.ShopInformationResponseDto;
 import com.menghor.smart_shop.feature.customer.mapper.ShopInformationMapper;

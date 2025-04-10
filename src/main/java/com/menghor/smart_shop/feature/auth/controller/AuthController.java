@@ -2,10 +2,10 @@ package com.menghor.smart_shop.feature.auth.controller;
 
 import com.menghor.smart_shop.enumations.RoleEnum;
 import com.menghor.smart_shop.enumations.Status;
-import com.menghor.smart_shop.exceptoins.error.BadRequestException;
-import com.menghor.smart_shop.exceptoins.error.DuplicateNameException;
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.error.BadRequestException;
+import com.menghor.smart_shop.exceptions.error.DuplicateNameException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.auth.dto.request.RegisterDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.AuthResponseDto;
 import com.menghor.smart_shop.feature.auth.dto.resposne.LoginDto;

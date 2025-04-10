@@ -1,4 +1,4 @@
-package com.menghor.smart_shop.exceptoins.error;
+package com.menghor.smart_shop.exceptions.error;
 
 public class NotFoundException extends RuntimeException {
     public NotFoundException(String message) {

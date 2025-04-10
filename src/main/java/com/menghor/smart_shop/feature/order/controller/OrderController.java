@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.menghor.smart_shop.enumations.OrderStatus;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.order.dto.request.OrderRequestDto;
 import com.menghor.smart_shop.feature.order.dto.response.OrderResponseDto;
 import com.menghor.smart_shop.feature.order.service.OrderService;

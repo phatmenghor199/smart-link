@@ -1,7 +1,7 @@
 package com.menghor.smart_shop.feature.setting.controller;
 
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.setting.dto.request.ImageRequestDto;
 import com.menghor.smart_shop.feature.setting.dto.resposne.ImageResponseDto;
 import com.menghor.smart_shop.feature.setting.model.ImageEntity;

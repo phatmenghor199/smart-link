@@ -1,12 +1,11 @@
 package com.menghor.smart_shop.feature.order.controller;
 
-import com.menghor.smart_shop.exceptoins.response.ApiResponse;
+import com.menghor.smart_shop.exceptions.response.ApiResponse;
 import com.menghor.smart_shop.feature.order.dto.request.CartItemRequestDto;
 import com.menghor.smart_shop.feature.order.dto.response.CartResponseDto;
 import com.menghor.smart_shop.feature.order.service.CartService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

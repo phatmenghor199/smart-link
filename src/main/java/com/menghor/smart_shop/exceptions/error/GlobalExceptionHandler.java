@@ -1,8 +1,8 @@
-package com.menghor.smart_shop.exceptoins.error;
+package com.menghor.smart_shop.exceptions.error;
 
-import com.menghor.smart_shop.exceptoins.response.ErrorObject;
-import com.menghor.smart_shop.exceptoins.response.ErrorRequestObject;
-import com.menghor.smart_shop.exceptoins.response.ErrorResponse;
+import com.menghor.smart_shop.exceptions.response.ErrorObject;
+import com.menghor.smart_shop.exceptions.response.ErrorRequestObject;
+import com.menghor.smart_shop.exceptions.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;

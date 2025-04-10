@@ -1,18 +1,15 @@
 package com.menghor.smart_shop.utils.database;
 
 import com.menghor.smart_shop.constants.ErrorMessages;
-import com.menghor.smart_shop.exceptoins.error.NotFoundException;
+import com.menghor.smart_shop.exceptions.error.NotFoundException;
 import com.menghor.smart_shop.feature.auth.models.UserEntity;
 import com.menghor.smart_shop.feature.auth.repository.UserRepository;
-import com.menghor.smart_shop.feature.customer.models.BannerEntity;
 import com.menghor.smart_shop.feature.customer.models.ShopEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 @Slf4j
