@@ -43,13 +43,7 @@ public class CartServiceImpl implements CartService {
 
         try {
             // Validate request
-            if (requestDto.getProductId() == null) {
-                throw new BadRequestException("Product ID is required");
-            }
-
-            if (requestDto.getQuantity() == null || requestDto.getQuantity() <= 0) {
-                requestDto.setQuantity(1); // Default to 1
-            }
+            validateCartItemRequest(requestDto);
 
             // Get shop ID for the current user
             Long shopId = securityUtils.getShopIdFromToken();
@@ -58,53 +52,17 @@ public class CartServiceImpl implements CartService {
             CartEntity cart = getOrCreateCartForShop(shopId);
 
             // Get product
-            ProductEntity product = productRepository.findById(requestDto.getProductId())
-                    .orElseThrow(() -> new NotFoundException("Product not found with ID: " + requestDto.getProductId()));
+            ProductEntity product = getProductById(requestDto.getProductId());
 
             // Check if item already exists in cart (same product and size)
             Optional<CartItemEntity> existingItem = findExistingCartItem(cart, requestDto);
 
             if (existingItem.isPresent()) {
                 // Update existing item quantity
-                CartItemEntity item = existingItem.get();
-                item.setQuantity(item.getQuantity() + requestDto.getQuantity());
-                cartItemRepository.save(item);
-                log.info("Updated quantity for existing cart item: {}", item.getId());
+                updateExistingCartItem(existingItem.get(), requestDto);
             } else {
                 // Create a new cart item
-                CartItemEntity newItem = new CartItemEntity();
-                newItem.setCart(cart);
-                newItem.setProduct(product);
-                newItem.setQuantity(requestDto.getQuantity());
-
-                // Handle size if provided
-                if (requestDto.getSizeId() != null) {
-                    ProductSizeEntity size = productSizeRepository.findById(requestDto.getSizeId())
-                            .orElseThrow(() -> new NotFoundException("Size not found with ID: " + requestDto.getSizeId()));
-                    newItem.setSize(size);
-
-                    // Set price and discount info from size
-                    if (size.isPromotionActive()) {
-                        newItem.setPrice(size.getFinalPrice());
-                        newItem.setDiscountType(size.getDiscountType());
-                        newItem.setDiscountValue(size.getDiscountValue());
-                    } else {
-                        newItem.setPrice(size.getPrice());
-                    }
-                } else {
-                    // Set price and discount info from product
-                    if (product.isPromotionActive()) {
-                        newItem.setPrice(product.getFinalPrice());
-                        newItem.setDiscountType(product.getDiscountType());
-                        newItem.setDiscountValue(product.getDiscountValue());
-                    } else {
-                        newItem.setPrice(product.getPrice());
-                    }
-                }
-
-                CartItemEntity savedItem = cartItemRepository.save(newItem);
-                cart.getCartItems().add(savedItem);
-                log.info("Added new item to cart: {}", savedItem.getId());
+                CartItemEntity newItem = createNewCartItem(cart, product, requestDto);
             }
 
             // Save cart and map to response
@@ -112,8 +70,73 @@ public class CartServiceImpl implements CartService {
             return cartMapper.toDetailedResponseDto(savedCart);
         } catch (Exception e) {
             log.error("Error adding item to cart: {}", e.getMessage(), e);
-            // Create fallback empty response
             return createEmptyCartResponse("Error adding to cart: " + e.getMessage());
+        }
+    }
+
+    private void validateCartItemRequest(CartItemRequestDto requestDto) {
+        if (requestDto.getProductId() == null) {
+            throw new BadRequestException("Product ID is required");
+        }
+
+        if (requestDto.getQuantity() == null || requestDto.getQuantity() <= 0) {
+            requestDto.setQuantity(1); // Default to 1
+        }
+    }
+
+    private ProductEntity getProductById(Long productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with ID: " + productId));
+    }
+
+    private void updateExistingCartItem(CartItemEntity item, CartItemRequestDto requestDto) {
+        item.setQuantity(item.getQuantity() + requestDto.getQuantity());
+        cartItemRepository.save(item);
+        log.info("Updated quantity for existing cart item: {}", item.getId());
+    }
+
+    private CartItemEntity createNewCartItem(CartEntity cart, ProductEntity product, CartItemRequestDto requestDto) {
+        CartItemEntity newItem = new CartItemEntity();
+        newItem.setCart(cart);
+        newItem.setProduct(product);
+        newItem.setQuantity(requestDto.getQuantity());
+
+        // Handle size if provided
+        if (requestDto.getSizeId() != null) {
+            ProductSizeEntity size = productSizeRepository.findById(requestDto.getSizeId())
+                    .orElseThrow(() -> new NotFoundException("Size not found with ID: " + requestDto.getSizeId()));
+            newItem.setSize(size);
+
+            // Set price and discount info from size
+            setPriceAndDiscountFromSize(newItem, size);
+        } else {
+            // Set price and discount info from product
+            setPriceAndDiscountFromProduct(newItem, product);
+        }
+
+        CartItemEntity savedItem = cartItemRepository.save(newItem);
+        cart.getCartItems().add(savedItem);
+        log.info("Added new item to cart: {}", savedItem.getId());
+        return savedItem;
+    }
+
+    private void setPriceAndDiscountFromSize(CartItemEntity item, ProductSizeEntity size) {
+        if (size.isPromotionActive()) {
+            item.setPrice(size.getFinalPrice());
+            item.setDiscountType(size.getDiscountType());
+            item.setDiscountValue(size.getDiscountValue());
+        } else {
+            item.setPrice(size.getPrice());
+        }
+    }
+
+    private void setPriceAndDiscountFromProduct(CartItemEntity item, ProductEntity product) {
+        if (product.isPromotionActive()) {
+            item.setPrice(product.getFinalPrice());
+            item.setDiscountType(product.getDiscountType());
+            item.setDiscountValue(product.getDiscountValue());
+        } else {
+            item.setPrice(product.getPrice());
         }
     }
 
@@ -129,28 +152,31 @@ public class CartServiceImpl implements CartService {
             // Get cart for this shop
             CartEntity cart = getCartForShop(shopId);
 
-            // Find cart item
-            CartItemEntity item = cartItemRepository.findById(cartItemId)
-                    .orElseThrow(() -> new NotFoundException("Cart item not found with ID: " + cartItemId));
-
-            // Verify item belongs to this cart
-            if (!item.getCart().getId().equals(cart.getId())) {
-                throw new BadRequestException("Cart item does not belong to your cart");
-            }
-
-            // Remove item
-            cart.getCartItems().remove(item);
-            cartItemRepository.delete(item);
-            log.info("Removed item from cart");
+            // Find and remove cart item
+            removeCartItem(cart, cartItemId);
 
             // Save cart and map to response
             CartEntity updatedCart = cartRepository.save(cart);
             return cartMapper.toDetailedResponseDto(updatedCart);
         } catch (Exception e) {
             log.error("Error removing item from cart: {}", e.getMessage(), e);
-            // Create fallback empty response
             return createEmptyCartResponse("Error removing from cart: " + e.getMessage());
         }
+    }
+
+    private void removeCartItem(CartEntity cart, Long cartItemId) {
+        CartItemEntity item = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new NotFoundException("Cart item not found with ID: " + cartItemId));
+
+        // Verify item belongs to this cart
+        if (!item.getCart().getId().equals(cart.getId())) {
+            throw new BadRequestException("Cart item does not belong to your cart");
+        }
+
+        // Remove item
+        cart.getCartItems().remove(item);
+        cartItemRepository.delete(item);
+        log.info("Removed item from cart");
     }
 
     @Override
@@ -166,18 +192,21 @@ public class CartServiceImpl implements CartService {
             CartEntity cart = getCartForShop(shopId);
 
             // Clear all items
-            cartItemRepository.deleteAll(cart.getCartItems());
-            cart.getCartItems().clear();
-            log.info("Cleared all items from cart");
+            clearCartItems(cart);
 
             // Save cart and map to response
             CartEntity clearedCart = cartRepository.save(cart);
             return cartMapper.toDetailedResponseDto(clearedCart);
         } catch (Exception e) {
             log.error("Error clearing cart: {}", e.getMessage(), e);
-            // Create fallback empty response
             return createEmptyCartResponse("Error clearing cart: " + e.getMessage());
         }
+    }
+
+    private void clearCartItems(CartEntity cart) {
+        cartItemRepository.deleteAll(cart.getCartItems());
+        cart.getCartItems().clear();
+        log.info("Cleared all items from cart");
     }
 
     @Override
@@ -191,11 +220,10 @@ public class CartServiceImpl implements CartService {
             // Get or create cart for this shop
             CartEntity cart = getOrCreateCartForShop(shopId);
 
-            // Map to response with carefully handling LOB data
+            // Map to response
             return cartMapper.toDetailedResponseDto(cart);
         } catch (Exception e) {
             log.error("Error getting cart: {}", e.getMessage(), e);
-            // Create fallback empty response
             return createEmptyCartResponse("Error getting cart: " + e.getMessage());
         }
     }
@@ -207,9 +235,7 @@ public class CartServiceImpl implements CartService {
 
         try {
             // Validate quantity
-            if (quantity < 0) {
-                throw new BadRequestException("Quantity cannot be negative");
-            }
+            validateQuantity(quantity);
 
             // Get shop ID for the current user
             Long shopId = securityUtils.getShopIdFromToken();
@@ -217,34 +243,43 @@ public class CartServiceImpl implements CartService {
             // Get cart for this shop
             CartEntity cart = getCartForShop(shopId);
 
-            // Find cart item
-            CartItemEntity item = cartItemRepository.findById(cartItemId)
-                    .orElseThrow(() -> new NotFoundException("Cart item not found with ID: " + cartItemId));
-
-            // Verify item belongs to this cart
-            if (!item.getCart().getId().equals(cart.getId())) {
-                throw new BadRequestException("Cart item does not belong to your cart");
-            }
-
-            if (quantity == 0) {
-                // Remove item if quantity is 0
-                cart.getCartItems().remove(item);
-                cartItemRepository.delete(item);
-                log.info("Removed item from cart due to zero quantity");
-            } else {
-                // Update quantity
-                item.setQuantity(quantity);
-                cartItemRepository.save(item);
-                log.info("Updated item quantity to: {}", quantity);
-            }
+            // Find and update cart item
+            updateCartItemQuantity(cart, cartItemId, quantity);
 
             // Save cart and map to response
             CartEntity updatedCart = cartRepository.save(cart);
             return cartMapper.toDetailedResponseDto(updatedCart);
         } catch (Exception e) {
             log.error("Error setting quantity: {}", e.getMessage(), e);
-            // Create fallback empty response
             return createEmptyCartResponse("Error setting quantity: " + e.getMessage());
+        }
+    }
+
+    private void validateQuantity(int quantity) {
+        if (quantity < 0) {
+            throw new BadRequestException("Quantity cannot be negative");
+        }
+    }
+
+    private void updateCartItemQuantity(CartEntity cart, Long cartItemId, int quantity) {
+        CartItemEntity item = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new NotFoundException("Cart item not found with ID: " + cartItemId));
+
+        // Verify item belongs to this cart
+        if (!item.getCart().getId().equals(cart.getId())) {
+            throw new BadRequestException("Cart item does not belong to your cart");
+        }
+
+        if (quantity == 0) {
+            // Remove item if quantity is 0
+            cart.getCartItems().remove(item);
+            cartItemRepository.delete(item);
+            log.info("Removed item from cart due to zero quantity");
+        } else {
+            // Update quantity
+            item.setQuantity(quantity);
+            cartItemRepository.save(item);
+            log.info("Updated item quantity to: {}", quantity);
         }
     }
 
@@ -263,10 +298,9 @@ public class CartServiceImpl implements CartService {
         return fallbackResponse;
     }
 
-    /*
-     * Helper methods
+    /**
+     * Get or create cart for a shop
      */
-
     private CartEntity getOrCreateCartForShop(Long shopId) {
         // Try to find existing cart
         Optional<CartEntity> existingCart = cartRepository.findByShopId(shopId).stream().findFirst();
@@ -284,12 +318,18 @@ public class CartServiceImpl implements CartService {
         return cartRepository.save(newCart);
     }
 
+    /**
+     * Get cart for a specific shop
+     */
     private CartEntity getCartForShop(Long shopId) {
         return cartRepository.findByShopId(shopId).stream()
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("Cart not found for shop"));
     }
 
+    /**
+     * Find existing cart item
+     */
     private Optional<CartItemEntity> findExistingCartItem(CartEntity cart, CartItemRequestDto requestDto) {
         return cart.getCartItems().stream()
                 .filter(item -> item.getProduct().getId().equals(requestDto.getProductId()) &&
